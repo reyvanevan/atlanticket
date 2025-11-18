@@ -1,0 +1,54 @@
+# ====================================
+# 🚀 Standard Gitignore for Node.js Project
+# ====================================
+
+# Dependency directory
+node_modules/
+
+# Production build
+dist/
+build/
+session/
+
+# Optional npm cache directory
+.npm/
+
+# Environment variables
+.env
+.env.* 
+
+# Service Account Keys (Firebase/GCP)
+serviceaccountkey.json
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temp files
+tmp/
+temp/
+
+# Database files
+*.sqlite
+*.db
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE settings
+.vscode/
+.idea/
+
+# Test coverage
+coverage/
+
+# Git metadata
+*.orig
+
+# ====================================
+# 🔥 End of Standard Gitignore
+# ====================================
