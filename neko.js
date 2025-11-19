@@ -901,8 +901,9 @@ User kirim gambar transfer, terus balas dengan:
       imageUrl = `./db/bukti_transfer/${fileName}`;
     }
 
-    // Generate reference ID (1 = Bukti Transfer)
-    const refID = `1${Date.now()}`;
+    // Generate reference ID (13 digit: 1 prefix + 12 digit timestamp)
+    const refTimestamp = Math.floor(Date.now() / 1000).toString().slice(-12);
+    const refID = `1${refTimestamp}`;
 
     // Simpan ke temp storage untuk verifikasi admin
     if (!global.pendingPayments) {
@@ -1036,9 +1037,10 @@ case 'approve_bukti': {
     const data = global.pendingPayments[refID];
     const userJid = data.userJid;
     
-    // Generate QR code tiket (2 = Tiket)
+    // Generate QR code tiket (2 = Tiket, 13 digit total)
     const moment = require('moment-timezone');
-    const ticketID = `2${Date.now()}`;
+    const ticketTimestamp = Math.floor(Date.now() / 1000).toString().slice(-12);
+    const ticketID = `2${ticketTimestamp}`;
     const qrData = `${ticketID}-${data.jumlah}-UMBandung Fest`;
     
     // Generate QR code
