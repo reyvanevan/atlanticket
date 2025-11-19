@@ -1013,6 +1013,8 @@ Silahkan tunggu konfirmasi dari admin.`;
 > Waktu : ${new Date().toLocaleString('id-ID')}
 ┈ׅ──ۄ─꯭─꯭──────꯭ׄ──ׅ┈
 
+🔗 Link: ${imageUrl}
+
 *Untuk melihat bukti & verifikasi:*
 \`.show ${refID}\`
 
