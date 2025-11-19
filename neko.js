@@ -1293,7 +1293,19 @@ case 'setbot': {
       default:
     }
   } catch (err) {
-    m.reply(util.format(err))
+    // Handle decryption errors gracefully
+    if (err.message && (err.message.includes('Bad MAC') || err.message.includes('decrypt'))) {
+      console.error(color(`[SESSION ERROR] ${err.message}`, 'red'));
+      console.log(color('ℹ️ Session error - bot akan tetap berjalan', 'yellow'));
+      // Jangan reply ke user, just log error
+    } else {
+      // Other errors
+      try {
+        m.reply(util.format(err))
+      } catch (e) {
+        console.error('Error sending error reply:', e);
+      }
+    }
   }
 }
 let file = require.resolve(__filename)
