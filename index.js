@@ -117,7 +117,7 @@ if (usePairingCode && !client.authState.creds.registered) {
   console.log('Meminta Code...');
   await delay(3500);
 
-  const code = await client.requestPairingCode(phoneNumber.trim(), true); // << tambahan "true"
+  const code = await client.requestPairingCode(phoneNumber.trim()); // << tambahan "true"
   console.log(color(`⚠︎ Kode Pairing Bot Whatsapp kamu :`, "gold"), color(`${code}`, "white"));
 }
 //=================================================//
