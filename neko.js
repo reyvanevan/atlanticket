@@ -1037,11 +1037,10 @@ case 'lihat_bukti': {
   try {
     // Download image dari URL dan kirim ke admin
     if (data.mediaPath) {
-      try {
-        const imageBuffer = await getBuffer(data.mediaPath);
-        await client.sendMessage(m.chat, { 
-          image: imageBuffer,
-          caption: `📸 *BUKTI TRANSFER ${data.refID}*
+      const imageBuffer = await getBuffer(data.mediaPath);
+      await client.sendMessage(m.chat, { 
+        image: imageBuffer,
+        caption: `📸 *BUKTI TRANSFER ${data.refID}*
 
 > Dari : ${data.userName} (${data.userPhone})
 > Jumlah : Rp ${data.jumlah.toLocaleString('id-ID')}
@@ -1050,21 +1049,7 @@ case 'lihat_bukti': {
 ┈ׅ──ۄ─꯭─꯭──────꯭ׄ──ׅ┈
 
 *Status: ${data.status.toUpperCase()}*`
-        }, { quoted: m });
-      } catch (imgErr) {
-        // Fallback ke text dengan link
-        m.reply(`📸 *BUKTI TRANSFER ${data.refID}*
-
-> Dari : ${data.userName} (${data.userPhone})
-> Jumlah : Rp ${data.jumlah.toLocaleString('id-ID')}
-> Catatan : ${data.catatan}
-> Waktu : ${data.createdAt.toLocaleString('id-ID')}
-┈ׅ──ۄ─꯭─꯭──────꯭ׄ──ׅ┈
-
-Link gambar: ${data.mediaPath}
-
-*Status: ${data.status.toUpperCase()}*`);
-      }
+      }, { quoted: m });
     }
   } catch (err) {
     m.reply(`❌ Error: ${err.message}`);
