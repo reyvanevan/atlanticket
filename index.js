@@ -86,7 +86,7 @@ spins.succeed(id, {text: text})
 //=================================================//
 
 CFonts.say(
-  "BOT TOPUP OTOMATIS ATLANTIC\n\n",
+  "BOT TIKET OTOMATIS ATLANTICKET\n\n",
   {
     colors: ["system"],
     font: "console",
@@ -166,7 +166,7 @@ setInterval(async () => {
     const transaksi = json.data.find(tx => tx.issuer_reff === tagihan.ref_id || tx.buyer_reff.includes(tagihan.nomor))
     if (transaksi && transaksi.type === 'CR') {
       // Pembayaran ditemukan
-      // Proses topup ke DigiFlazz di sini (panggil API DigiFlazz)
+      // Proses booking tiket di sini (update status tiket)
       client.sendMessage(`${tagihan.nomor}@s.whatsapp.net`, {
         text: `✅ Pembayaran berhasil untuk ${tagihan.buyer_sku_code} ke ${tagihan.tujuan}.\nSedang diproses...`
       })
@@ -195,7 +195,7 @@ client.ev.on('group-participants.update', async (anu) => {
       if (anu.action == 'add' && welcomeEnabled) {
         // Kirim teks sambutan
         await client.sendMessage(anu.id, {
-          text: `Halo @${num.split("@")[0]}, Selamat Datang Di Group *${metadata.subject}*\n\n_Silahkan Ketik *Daftar* Untuk Bisa Mengakses bot Topup Otomatis_\n\nSilahkan Ketik *List* / *Produk* Untuk Menampilkan Daftar Layanan Grup ya ✨`,
+          text: `Halo @${num.split("@")[0]}, Selamat Datang Di Group *${metadata.subject}*\n\n_Silahkan Ketik *Daftar* Untuk Bisa Mengakses bot Pemesanan Tiket Otomatis_\n\nSilahkan Ketik *Jadwal* / *Tiket* Untuk Menampilkan Daftar Event ya ✨`,
           mentions: [num]
         });
       } else if (anu.action == 'remove' && goodbyeEnabled) {
