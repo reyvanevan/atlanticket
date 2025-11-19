@@ -852,60 +852,80 @@ case 'bukti_transfer': {
 
 Caranya:
 1. Kirim screenshot bukti transfer
-2. Reply screenshot dengan: .bukti_transfer [jumlah] [nomor_hp] [catatan]
+2. Reply screenshot dengan: .bukti_transfer [jumlah] [catatan]
 
 *Contoh:*
 User kirim gambar transfer, terus balas dengan:
-\`.bukti_transfer 25000 6289653544913 UMBandung Fest - 1 tiket\`
+\`.bukti_transfer 25000 UMBandung Fest - 1 tiket\`
 
 ⚠️ *PENTING:*
 > Screenshot harus jelas
 > Berisi nama rekening, jumlah, dan waktu transfer
-> Nomor HP harus format 62XXXXXXXXXX (tanpa 0 di depan)
 > Admin akan verifikasi dalam 5 menit`);
   }
 
   if (!text) {
-    return m.reply('Format: .bukti_transfer [jumlah] [nomor_hp] [catatan]\nContoh: .bukti_transfer 25000 6289653544913 UMBandung Fest - 1 tiket');
+    return m.reply('Format: .bukti_transfer [jumlah] [catatan]\nContoh: .bukti_transfer 25000 UMBandung Fest - 1 tiket');
   }
 
   try {
     const parts = text.split(' ');
     const jumlah = parseInt(parts[0]);
-    const userPhoneInput = parts[1];
-    const catatan = parts.slice(2).join(' ');
+    const catatan = parts.slice(1).join(' ');
 
     if (isNaN(jumlah)) {
       return m.reply('❌ Jumlah harus berupa angka!');
     }
 
-    // Validate nomor HP
-    if (!userPhoneInput || !/^62\d{9,12}$/.test(userPhoneInput)) {
-      return m.reply('❌ Nomor HP tidak valid!\nFormat: 62XXXXXXXXXX (10-13 digit setelah 62)\nContoh: 6289653544913');
-    }
-
     // Download image
     const timestamp = Date.now();
-    const fileName = `bukti_${userPhoneInput}_${timestamp}.jpg`;
-    const filePath = `./db/bukti_transfer/${fileName}`;
+    const tmpFileName = `bukti_${timestamp}.jpg`;
+    const tmpFilePath = `./tmp/${tmpFileName}`;
 
-    // Ensure directory exists
-    const dir = './db/bukti_transfer';
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+    // Ensure tmp directory exists
+    const tmpDir = './tmp';
+    if (!fs.existsSync(tmpDir)) {
+      fs.mkdirSync(tmpDir, { recursive: true });
     }
 
-    // Download media
-    const mediaPath = await downloadAndSaveMediaMessage('image', filePath);
+    // Download media to temp
+    await downloadAndSaveMediaMessage('image', tmpFilePath);
 
-    // Upload ke cloud if imagecloud available
+    // Upload ke PixHost
     let imageUrl = null;
     try {
-      const { uploadImage } = require('./lib/imagecloud');
-      imageUrl = await uploadImage(mediaPath);
+      const FormData = require('form-data');
+      const form = new FormData();
+      form.append('img', fs.createReadStream(tmpFilePath));
+      form.append('content_type', '0');
+      form.append('max_th_size', '420');
+
+      const axiosRes = await axios.post('https://api.pixhost.to/images', form, {
+        headers: form.getHeaders()
+      });
+
+      const json = axiosRes.data;
+      if (json.show_url) {
+        // Parse URL dari PixHost
+        const match = /\/show\/(\d+)\/(\d+_.+)/.exec(json.show_url);
+        if (match) {
+          const folderId = match[1];
+          const filename = match[2];
+          imageUrl = `https://img1.pixhost.to/images/${folderId}/${filename}`;
+        }
+      }
     } catch (e) {
-      console.log('⚠️ Image cloud not available, using local file');
-      imageUrl = `./db/bukti_transfer/${fileName}`;
+      console.log('⚠️ PixHost upload gagal:', e.message);
+      imageUrl = null;
+    }
+
+    // Hapus temp file
+    try {
+      fs.unlinkSync(tmpFilePath);
+    } catch (e) {}
+
+    if (!imageUrl) {
+      return m.reply('❌ Gagal upload gambar ke server. Coba lagi.');
     }
 
     // Generate reference ID (13 digit: 1 prefix + 12 digit timestamp)
@@ -917,14 +937,18 @@ User kirim gambar transfer, terus balas dengan:
       global.pendingPayments = {};
     }
 
-    // Get user name from various sources
+    // Get user name dari berbagai sumber
     let userName = m.pushName || 'Unknown User';
     if (global.db.users && global.db.users[m.sender] && global.db.users[m.sender].nama) {
       userName = global.db.users[m.sender].nama;
     }
 
-    // Gunakan nomor HP yang di-input user
-    const phoneNumber = userPhoneInput;
+    // Extract nomor HP dari JID (fallback jika ada)
+    let phoneNumber = extractPhoneNumber(m.sender);
+    // Pastikan format valid, jika tidak gunakan generic
+    if (!/^62\d{9,12}$/.test(phoneNumber)) {
+      phoneNumber = 'Tidak Terdeteksi';
+    }
 
     global.pendingPayments[refID] = {
       refID: refID,
@@ -934,7 +958,6 @@ User kirim gambar transfer, terus balas dengan:
       jumlah: jumlah,
       catatan: catatan,
       mediaPath: imageUrl,
-      localPath: filePath,
       createdAt: new Date(),
       status: 'pending'
     };
@@ -1011,11 +1034,13 @@ case 'lihat_bukti': {
   const data = global.pendingPayments[refID];
   
   try {
-    // Kirim image ke admin
-    if (data.localPath && fs.existsSync(data.localPath)) {
-      await client.sendMessage(m.chat, { 
-        image: fs.readFileSync(data.localPath),
-        caption: `📸 *BUKTI TRANSFER ${data.refID}*
+    // Download image dari URL dan kirim ke admin
+    if (data.mediaPath) {
+      try {
+        const imageBuffer = await getBuffer(data.mediaPath);
+        await client.sendMessage(m.chat, { 
+          image: imageBuffer,
+          caption: `📸 *BUKTI TRANSFER ${data.refID}*
 
 > Dari : ${data.userName} (${data.userPhone})
 > Jumlah : Rp ${data.jumlah.toLocaleString('id-ID')}
@@ -1024,7 +1049,21 @@ case 'lihat_bukti': {
 ┈ׅ──ۄ─꯭─꯭──────꯭ׄ──ׅ┈
 
 *Status: ${data.status.toUpperCase()}*`
-      }, { quoted: m });
+        }, { quoted: m });
+      } catch (imgErr) {
+        // Fallback ke text dengan link
+        m.reply(`📸 *BUKTI TRANSFER ${data.refID}*
+
+> Dari : ${data.userName} (${data.userPhone})
+> Jumlah : Rp ${data.jumlah.toLocaleString('id-ID')}
+> Catatan : ${data.catatan}
+> Waktu : ${data.createdAt.toLocaleString('id-ID')}
+┈ׅ──ۄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+Link gambar: ${data.mediaPath}
+
+*Status: ${data.status.toUpperCase()}*`);
+      }
     }
   } catch (err) {
     m.reply(`❌ Error: ${err.message}`);
@@ -1050,16 +1089,16 @@ case 'approve_bukti': {
     const ticketID = `2${ticketTimestamp}`;
     const qrData = `${ticketID}-${data.jumlah}-UMBandung Fest`;
     
-    // Generate QR code
+    // Generate QR code to temp
     const qrcode = require('qrcode');
-    const qrImagePath = `./db/qr_tickets/${ticketID}.png`;
+    const tmpQRPath = `./tmp/qr_${ticketID}.png`;
     
-    // Ensure directory exists
-    if (!fs.existsSync('./db/qr_tickets')) {
-      fs.mkdirSync('./db/qr_tickets', { recursive: true });
+    // Ensure tmp directory exists
+    if (!fs.existsSync('./tmp')) {
+      fs.mkdirSync('./tmp', { recursive: true });
     }
 
-    await qrcode.toFile(qrImagePath, qrData, {
+    await qrcode.toFile(tmpQRPath, qrData, {
       errorCorrectionLevel: 'H',
       type: 'image/png',
       quality: 0.95,
@@ -1067,7 +1106,38 @@ case 'approve_bukti': {
       width: 300
     });
 
-    // Kirim tiket ke user
+    // Upload QR ke PixHost
+    let qrUrl = null;
+    try {
+      const FormData = require('form-data');
+      const form = new FormData();
+      form.append('img', fs.createReadStream(tmpQRPath));
+      form.append('content_type', '0');
+      form.append('max_th_size', '420');
+
+      const axiosRes = await axios.post('https://api.pixhost.to/images', form, {
+        headers: form.getHeaders()
+      });
+
+      const json = axiosRes.data;
+      if (json.show_url) {
+        const match = /\/show\/(\d+)\/(\d+_.+)/.exec(json.show_url);
+        if (match) {
+          const folderId = match[1];
+          const filename = match[2];
+          qrUrl = `https://img1.pixhost.to/images/${folderId}/${filename}`;
+        }
+      }
+    } catch (e) {
+      console.log('⚠️ QR PixHost upload gagal:', e.message);
+    }
+
+    // Hapus temp QR file
+    try {
+      fs.unlinkSync(tmpQRPath);
+    } catch (e) {}
+
+    // Kirim tiket ke user dengan image
     const ticketMsg = `✅ *PEMBAYARAN DISETUJUI - TIKET DIGENERATE*
 
 > Kode Tiket : ${ticketID}
@@ -1080,10 +1150,19 @@ case 'approve_bukti': {
 🎫 *QR CODE TIKET (SIMPAN BAIK-BAIK)*`;
 
     // Send QR code image
-    await client.sendMessage(userJid, { 
-      image: fs.readFileSync(qrImagePath),
-      caption: ticketMsg
-    });
+    if (qrUrl) {
+      try {
+        const qrBuffer = await getBuffer(qrUrl);
+        await client.sendMessage(userJid, { 
+          image: qrBuffer,
+          caption: ticketMsg
+        });
+      } catch (e) {
+        console.log('Error sending QR image:', e);
+        // Fallback: send text with link
+        await client.sendMessage(userJid, { text: `${ticketMsg}\n\n🔗 Link QR: ${qrUrl}` });
+      }
+    }
 
     // Konfirmasi ke admin
     m.reply(`✅ *BUKTI TRANSFER DISETUJUI*
@@ -1110,7 +1189,7 @@ case 'approve_bukti': {
       buyerPhone: phoneNumber,
       konser: 'UMBandung Fest',
       harga: data.jumlah,
-      qrCode: qrImagePath,
+      qrCode: qrUrl || null,
       status: 'aktif',
       createdAt: new Date(),
       approvedAt: new Date(),
@@ -1123,7 +1202,8 @@ case 'approve_bukti': {
       status: 'approved',
       approvedAt: new Date(),
       approvedBy: m.sender,
-      ticketID: ticketID
+      ticketID: ticketID,
+      qrCode: qrUrl || null
     });
 
     // Update status
