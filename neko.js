@@ -3,7 +3,7 @@ let autoGetLayanan = false;
 let intervalId;
 let antilinkEnabled = false;
 
-const { BufferJSON, WA_DEFAULT_EPHEMERAL, makeWASocket, useMultiFileAuthState, getAggregateVotesInPollMessage, generateWAMessageFromContent, proto, generateWAMessageContent, generateWAMessage, prepareWAMessageMedia, downloadContentFromMessage, areJidsSameUser, getContentType } = require("@whiskeysockets/baileys")
+const { BufferJSON, WA_DEFAULT_EPHEMERAL, makeWASocket, useMultiFileAuthState, getAggregateVotesInPollMessage, generateWAMessageFromContent, proto, generateWAMessageContent, generateWAMessage, prepareWAMessageMedia, downloadContentFromMessage, areJidsSameUser, getContentType, jidDecode } = require("@whiskeysockets/baileys")
 const fs = require('fs')
 const pino = require('pino')
 const pushname = m.pushName || "No Name"
@@ -180,6 +180,30 @@ const command = cleanBody.replace(prefix, '').trim().split(/ +/).shift().toLower
     const botNumber = await client.decodeJid(client.user.id)
     const isOwner = [botNumber, ...global.owner].map(v => v.replace(/[^0-9]/g, '') + '@s.whatsapp.net').includes(m.sender)
     const sender = m.isGroup ? (m.key.participant ? m.key.participant : m.participant) : m.key.remoteJid
+    
+    // Helper function untuk extract nomor HP yang benar dari JID
+    const extractPhoneNumber = (jid) => {
+      try {
+        // Decode JID menggunakan jidDecode
+        const decoded = jidDecode(jid);
+        if (decoded && decoded.user) {
+          return decoded.user;
+        }
+      } catch (e) {
+        // Fallback jika jidDecode gagal
+      }
+      
+      // Fallback: extract dari string
+      let phone = jid.split('@')[0];
+      // Handle format dengan colon
+      if (phone.includes(':')) {
+        phone = phone.split(':').pop();
+      }
+      // Remove leading zeros/plus
+      phone = phone.replace(/^0+/, '').replace(/^\+/, '');
+      return phone;
+    };
+    
     const groupMetadata = m.isGroup ? await client.groupMetadata(from).catch(e => {}) : ''
     const groupName = m.isGroup ? groupMetadata.subject : ''
     const participants = m.isGroup ? await groupMetadata.participants : ''
@@ -892,13 +916,7 @@ User kirim gambar transfer, terus balas dengan:
     }
 
     // Extract nomor HP dari JID dengan normalisasi
-    let phoneNumber = m.sender.split('@')[0];
-    // Handle berbagai format JID
-    if (phoneNumber.includes(':')) {
-      phoneNumber = phoneNumber.split(':')[1]; // Format: country:number
-    }
-    // Hapus leading zeros jika ada dan pastikan format correct
-    phoneNumber = phoneNumber.replace(/^0+/, '');
+    let phoneNumber = extractPhoneNumber(m.sender);
 
     global.pendingPayments[refID] = {
       refID: refID,
@@ -1071,13 +1089,7 @@ case 'approve_bukti': {
 ✅ Tiket sudah dikirim ke user`);
 
     // Extract nomor HP dari JID dengan normalisasi
-    let phoneNumber = userJid.split('@')[0];
-    // Handle berbagai format JID
-    if (phoneNumber.includes(':')) {
-      phoneNumber = phoneNumber.split(':')[1]; // Format: country:number
-    }
-    // Hapus leading zeros jika ada dan pastikan format correct
-    phoneNumber = phoneNumber.replace(/^0+/, '');
+    let phoneNumber = extractPhoneNumber(userJid);
     
     // Simpan ke Firestore
     const firestore = admin.firestore();
