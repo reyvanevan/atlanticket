@@ -406,9 +406,14 @@ const Input = Array.isArray(mentionByTag) && mentionByTag.length > 0 ? mentionBy
     if (!client.public) {
       if (!m.key.fromMe) return
     }
-    if (m.message) {
-      console.log(chalk.red(chalk.bgBlack('[ PESAN ] => ')), chalk.white(chalk.bgBlack(budy || m.mtype)) + '\n' + chalk.magenta('=> Dari'), chalk.green(pushname), chalk.yellow(m.sender.split("@")[0]) + '\n' + chalk.blueBright('=> Di'), chalk.green(m.isGroup ? pushname : 'Private Chat'), chalk.magenta(`\nJam :`) + time1)
+    
+    // Log hanya private messages, ignore group messages
+    if (m.message && !m.isGroup) {
+      console.log(chalk.red(chalk.bgBlack('[ PESAN ] => ')), chalk.white(chalk.bgBlack(budy || m.mtype)) + '\n' + chalk.magenta('=> Dari'), chalk.green(pushname), chalk.yellow(m.sender.split("@")[0]) + '\n' + chalk.blueBright('=> Di'), chalk.green('Private Chat'), chalk.magenta(`\nJam :`) + time1)
     }
+
+    // Ignore group messages untuk command processing
+    if (m.isGroup) return
 
 
   /*    
@@ -583,12 +588,6 @@ case 'checkout': {
 			
 case 'bot': {
   let pesanBot;
-  if (isGroup) {
-    pesanBot = botgroup[m.chat] || global.bot; // fallback ke global.bot
-  } else {
-    pesanBot = global.bot;
-  }
-
   client.sendMessage(m.chat, { text: pesanBot }, { quoted: m });
   break;
 }
