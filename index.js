@@ -21,6 +21,7 @@ const { Boom } = require('@hapi/boom')
 const PhoneNumber = require('awesome-phonenumber')
 const { color, bgcolor } = require('./lib/color')
 const { welcomeCard } = require("greetify");
+const qrcode = require('qrcode-terminal');
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
 //const { setupScheduledTasks, setClient } = require('./scheduler');
 
@@ -34,7 +35,7 @@ day: 'numeric',
 month: 'long',
 year: 'numeric'
 })
-const usePairingCode = true
+const usePairingCode = false
 
 const { smsg, isUrl, generateMessageTag, getBuffer, getSizeMedia, fetchJson, await, sleep } = require('./lib/myfunc')
 const question = (text) => {
@@ -104,7 +105,6 @@ const { version } = await fetchLatestBaileysVersion();
 const client = makeWASocket({
   version,
   logger: pino({ level: "silent" }),
-  printQRInTerminal: !usePairingCode,
   auth: state,
   browser: [ "Ubuntu", "Chrome", "20.0.04" ],
   linkPreviewImageThumbnailWidth: 100 // WAJIB di versi 6.3.0 ke atas
@@ -353,7 +353,11 @@ const { connection, lastDisconnect, qr } = update;
 
 // Show QR code jika ada
 if (qr) {
-  console.log(color('QR Code received! Scan dengan WhatsApp', 'cyan'));
+  console.log(color('\n╔════════════════════════════════════════╗', 'cyan'));
+  console.log(color('║  📱 SCAN QR CODE DENGAN WHATSAPP      ║', 'yellow'));
+  console.log(color('╚════════════════════════════════════════╝\n', 'cyan'));
+  qrcode.generate(qr, { small: true });
+  console.log(color('═════════════════════════════════════════\n', 'cyan'));
 }
 
 if (connection === "close") {
