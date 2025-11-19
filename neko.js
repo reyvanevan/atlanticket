@@ -891,8 +891,14 @@ User kirim gambar transfer, terus balas dengan:
       userName = global.db.users[m.sender].nama;
     }
 
-    // Extract nomor HP dari JID
-    const phoneNumber = m.sender.split('@')[0];
+    // Extract nomor HP dari JID dengan normalisasi
+    let phoneNumber = m.sender.split('@')[0];
+    // Handle berbagai format JID
+    if (phoneNumber.includes(':')) {
+      phoneNumber = phoneNumber.split(':')[1]; // Format: country:number
+    }
+    // Hapus leading zeros jika ada dan pastikan format correct
+    phoneNumber = phoneNumber.replace(/^0+/, '');
 
     global.pendingPayments[refID] = {
       refID: refID,
@@ -1048,8 +1054,14 @@ case 'approve_bukti': {
 
 ✅ Tiket sudah dikirim ke user`);
 
-    // Extract nomor HP dari JID
-    const phoneNumber = userJid.split('@')[0];
+    // Extract nomor HP dari JID dengan normalisasi
+    let phoneNumber = userJid.split('@')[0];
+    // Handle berbagai format JID
+    if (phoneNumber.includes(':')) {
+      phoneNumber = phoneNumber.split(':')[1]; // Format: country:number
+    }
+    // Hapus leading zeros jika ada dan pastikan format correct
+    phoneNumber = phoneNumber.replace(/^0+/, '');
     
     // Simpan ke Firestore
     const firestore = admin.firestore();
