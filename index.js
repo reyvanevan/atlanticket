@@ -110,33 +110,16 @@ const client = makeWASocket({
   linkPreviewImageThumbnailWidth: 100 // WAJIB di versi 6.3.0 ke atas
 });
 
-// Request pairing code ONLY after connection is fully established
 if (usePairingCode && !client.authState.creds.registered) {
-  const onConnectionUpdate = async (update) => {
-    const { connection } = update;
-    
-    // IMPORTANT: Wait until connection is 'open' before requesting pairing code
-    // This prevents Error 428 "Connection Closed"
-    if (connection === 'open' && !client.authState.creds.registered) {
-      // Remove this listener after handling
-      client.ev.off('connection.update', onConnectionUpdate);
-      
-      try {
-        const phoneNumber = await question(color(`\n\nMasukan Nomor :\n`, 'white'));
-        
-        console.log(color('Meminta Code...', 'yellow'));
-        
-        // Define your custom 8-digit code (alphanumeric) - sesuai dokumentasi README
-        const customPairingCode = "ATLNCODE";
-        const code = await client.requestPairingCode(phoneNumber.trim(), customPairingCode);
-        console.log(color(`⚠︎ Kode Pairing Bot Whatsapp kamu :`, "gold"), color(`${code?.match(/.{1,4}/g)?.join('-') || code}`, "white"));
-      } catch (err) {
-        console.error(color('Error requesting pairing code:', 'red'), err.message);
-      }
-    }
-  };
-  
-  client.ev.on('connection.update', onConnectionUpdate);
+  const phoneNumber = await question(color(`\n\nMasukan Nomor :\n`, 'white'));
+
+  const delayMs = ms => new Promise(resolve => setTimeout(resolve, ms));
+  console.log(color('Meminta Code...', 'yellow'));
+  await delayMs(3500); // Wait untuk connection establishment
+
+  const customPairingCode = "ATLNCODE";
+  const code = await client.requestPairingCode(phoneNumber.trim(), customPairingCode);
+  console.log(color(`⚠︎ Kode Pairing Bot Whatsapp kamu :`, "gold"), color(`${code?.match(/.{1,4}/g)?.join('-') || code}`, "white"));
 } else if (client.authState.creds.registered) {
   console.log(color('✅ Using existing session', 'green'));
 }
