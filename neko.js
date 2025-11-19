@@ -852,34 +852,41 @@ case 'bukti_transfer': {
 
 Caranya:
 1. Kirim screenshot bukti transfer
-2. Reply screenshot dengan: .bukti_transfer [jumlah] [catatan]
+2. Reply screenshot dengan: .bukti_transfer [jumlah] [nomor_hp] [catatan]
 
 *Contoh:*
 User kirim gambar transfer, terus balas dengan:
-\`.bukti_transfer 25000 UMBandung Fest - 1 tiket\`
+\`.bukti_transfer 25000 6289653544913 UMBandung Fest - 1 tiket\`
 
 ⚠️ *PENTING:*
 > Screenshot harus jelas
 > Berisi nama rekening, jumlah, dan waktu transfer
+> Nomor HP harus format 62XXXXXXXXXX (tanpa 0 di depan)
 > Admin akan verifikasi dalam 5 menit`);
   }
 
   if (!text) {
-    return m.reply('Format: .bukti_transfer [jumlah] [catatan]\nContoh: .bukti_transfer 25000 UMBandung Fest - 1 tiket');
+    return m.reply('Format: .bukti_transfer [jumlah] [nomor_hp] [catatan]\nContoh: .bukti_transfer 25000 6289653544913 UMBandung Fest - 1 tiket');
   }
 
   try {
     const parts = text.split(' ');
     const jumlah = parseInt(parts[0]);
-    const catatan = parts.slice(1).join(' ');
+    const userPhoneInput = parts[1];
+    const catatan = parts.slice(2).join(' ');
 
     if (isNaN(jumlah)) {
       return m.reply('❌ Jumlah harus berupa angka!');
     }
 
+    // Validate nomor HP
+    if (!userPhoneInput || !/^62\d{9,12}$/.test(userPhoneInput)) {
+      return m.reply('❌ Nomor HP tidak valid!\nFormat: 62XXXXXXXXXX (10-13 digit setelah 62)\nContoh: 6289653544913');
+    }
+
     // Download image
     const timestamp = Date.now();
-    const fileName = `bukti_${m.sender.split('@')[0]}_${timestamp}.jpg`;
+    const fileName = `bukti_${userPhoneInput}_${timestamp}.jpg`;
     const filePath = `./db/bukti_transfer/${fileName}`;
 
     // Ensure directory exists
@@ -916,8 +923,8 @@ User kirim gambar transfer, terus balas dengan:
       userName = global.db.users[m.sender].nama;
     }
 
-    // Extract nomor HP dari JID dengan normalisasi
-    let phoneNumber = extractPhoneNumber(m.sender);
+    // Gunakan nomor HP yang di-input user
+    const phoneNumber = userPhoneInput;
 
     global.pendingPayments[refID] = {
       refID: refID,
