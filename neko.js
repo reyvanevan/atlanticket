@@ -475,33 +475,118 @@ function saveDatabase(db) {
       */
       m.body = m.body || ''
       
+    // ============= HELPER FUNCTIONS UNTUK STRUK =============
+    const generateTicketStruk = (data) => {
+      const { invoice, concert, price, buyerName, buyerPhone, status } = data;
+      const moment = require('moment-timezone');
+      const txDate = moment.tz('Asia/Jakarta').format('dddd, DD MMMM YYYY');
+      const txTime = moment.tz('Asia/Jakarta').format('HH:mm:ss');
+      
+      if (status === 'pending') {
+        return `🔄 *PESANAN DIPROSES - PENDING*
+
+> Invoice : ${invoice}
+> Konser : ${concert}
+> Harga : Rp ${price.toLocaleString('id-ID')}
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+⏳ *Menunggu verifikasi pembayaran...*`;
+      }
+      
+      if (status === 'success') {
+        return `✅ *TIKET BERHASIL DIBELI*
+
+> Invoice : ${invoice}
+> Konser : ${concert}
+> Harga : Rp ${price.toLocaleString('id-ID')}
+> Pembeli : ${buyerName}
+> Telepon : ${buyerPhone}
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+� *STRUK PEMBELIAN*
+> Tanggal : ${txDate}
+> Jam : ${txTime} WIB
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+🎫 Tiket akan dikirim melalui chat
+> Silahkan cek pesan berikutnya`;
+      }
+      
+      if (status === 'failed') {
+        return `❌ *PEMBELIAN GAGAL*
+
+> Invoice : ${invoice}
+> Konser : ${concert}
+> Harga : Rp ${price.toLocaleString('id-ID')}
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+⚠️ *Pembayaran tidak terverifikasi*
+> Silahkan hubungi admin untuk info`;
+      }
+    };
+
+    const sendNotifToOwner = (data) => {
+      const { invoice, concert, price, buyerName, buyerPhone, status } = data;
+      const moment = require('moment-timezone');
+      const txDate = moment.tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss');
+      
+      if (status === 'success') {
+        return `✅ *NOTIFIKASI PEMBELIAN TIKET*
+
+> Invoice : ${invoice}
+> Pembeli : ${buyerName}
+> Telepon : ${buyerPhone}
+> Konser : ${concert}
+> Harga : Rp ${price.toLocaleString('id-ID')}
+> Waktu : ${txDate}
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+_Silahkan proses pengiriman tiket_`;
+      }
+      
+      if (status === 'failed') {
+        return `⚠️ *NOTIFIKASI GAGAL PEMBAYARAN*
+
+> Invoice : ${invoice}
+> Pembeli : ${buyerName}
+> Telepon : ${buyerPhone}
+> Konser : ${concert}
+> Harga : Rp ${price.toLocaleString('id-ID')}
+> Waktu : ${txDate}
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+_Pembayaran tidak terverifikasi - hubungi user_`;
+      }
+    };
+    
     switch (command) {
 
 case 'menu': {
-  const menuText = `
-╔═══════════════════════════════════════╗
-║   🎫 TIKET KONSER ATLANTICKET 🎫    ║
-╠═══════════════════════════════════════╣
-║                                       ║
-║  Pilih konser yang ingin Anda beli:   ║
-║                                       ║
-║  1️⃣  Konser Artist A                  ║
-║     📅 5 Desember 2025                ║
-║     💵 Rp 500.000                     ║
-║                                       ║
-║  2️⃣  Konser Artist B                  ║
-║     📅 12 Desember 2025               ║
-║     💵 Rp 750.000                     ║
-║                                       ║
-║  3️⃣  Konser Artist C                  ║
-║     📅 20 Desember 2025               ║
-║     💵 Rp 600.000                     ║
-║                                       ║
-╠═══════════════════════════════════════╣
-║  Balas dengan nomor (1/2/3) untuk    ║
-║  melihat detail & memesan tiket       ║
-╚═══════════════════════════════════════╝
-  `;
+  const menuText = `🎫 *TIKET KONSER ATLANTICKET* 🎫
+
+> Pilih konser yang ingin Anda beli:
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+🎤 *KONSER ARTIST A*
+> Tanggal : 5 Desember 2025
+> Harga : Rp 500.000
+> Status : ✅
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+🎤 *KONSER ARTIST B*
+> Tanggal : 12 Desember 2025
+> Harga : Rp 750.000
+> Status : ✅
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+🎤 *KONSER ARTIST C*
+> Tanggal : 20 Desember 2025
+> Harga : Rp 600.000
+> Status : ✅
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+> Balas dengan: .order 1/2/3
+> Untuk melihat detail & memesan tiket`;
   m.reply(menuText);
   break;
 }
@@ -538,50 +623,49 @@ case 'order': {
   const konser = konserData[text];
   if (!konser) return m.reply('❌ Nomor konser tidak valid! Gunakan .menu untuk melihat pilihan.');
 
-  const orderText = `
-╔════════════════════════════════════════╗
-║        📋 DETAIL TIKET KONSER         ║
-╠════════════════════════════════════════╣
-║                                        ║
-║  🎤 Event: ${konser.nama}
-║  📅 Tanggal: ${konser.tanggal}
-║  🕐 Jam: ${konser.jam}
-║  📍 Lokasi: ${konser.lokasi}
-║  💰 Harga: Rp ${konser.harga.toLocaleString('id-ID')}
-║                                        ║
-╠════════════════════════════════════════╣
-║  Untuk membeli, hubungi admin:        ║
-║  ${global.ownerName}                        ║
-║  wa.me/${global.nomerOwner}            ║
-║                                        ║
-║  atau balas .checkout untuk lanjut    ║
-╚════════════════════════════════════════╝
-  `;
+  const orderText = `📋 *DETAIL TIKET KONSER*
+
+🎤 *${konser.nama}*
+> Event : ${konser.nama}
+> Tanggal : ${konser.tanggal}
+> Jam : ${konser.jam}
+> Lokasi : ${konser.lokasi}
+> Harga : Rp ${konser.harga.toLocaleString('id-ID')}
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+> Untuk membeli, hubungi admin:
+> ${global.ownerName}
+> wa.me/${global.nomerOwner}
+
+> atau balas .checkout untuk lanjut`;
   m.reply(orderText);
   break;
 }
 
 case 'checkout': {
-  const checkoutText = `
-╔════════════════════════════════════════╗
-║       💳 PROSES CHECKOUT TIKET        ║
-╠════════════════════════════════════════╣
-║                                        ║
-║  Silahkan lakukan pembayaran ke:      ║
-║                                        ║
-║  💳 Transfer: ATM/E-Banking           ║
-║  👨‍💼 Rekening: ${global.nomerOwner}          ║
-║  📲 QRIS: ${global.linkQRIS || 'hubungi admin'}
-║                                        ║
-║  ⚠️  Verifikasi pembayaran otomatis   ║
-║     dalam 5 menit                    ║
-║                                        ║
-║  Jika ada pertanyaan:                 ║
-║  Hubungi: ${global.ownerName}         ║
-║  ${global.linkGC}
-║                                        ║
-╚════════════════════════════════════════╝
-  `;
+  const checkoutText = `💳 *PROSES CHECKOUT TIKET*
+
+> Silahkan lakukan pembayaran ke:
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+💳 *Transfer: ATM/E-Banking*
+> Bank : ${global.bankName || 'Hubungi Admin'}
+> Rekening : ${global.nomerOwner}
+> Atas Nama : ${global.ownerName}
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+📲 *QRIS*
+> Link : ${global.linkQRIS || 'hubungi admin'}
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+⚠️ *VERIFIKASI PEMBAYARAN*
+> Waktu : Dalam 5 menit otomatis
+> Jika belum : Hubungi admin
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+👨‍💼 *HUBUNGI ADMIN*
+> Admin : ${global.ownerName}
+> Group : ${global.linkGC}`;
   m.reply(checkoutText);
   break;
 }
