@@ -138,7 +138,6 @@ client.public = true
 //=================================================//
 client.ev.on('messages.upsert', async chatUpdate => {
 try {
-console.log('Received message update:', chatUpdate.type) // Debug log
 mek = chatUpdate.messages[0]
 if (!mek.message) return
 mek.message = (Object.keys(mek.message)[0] === 'ephemeralMessage') ? mek.message.ephemeralMessage.message : mek.message
@@ -149,7 +148,6 @@ if (!client.public && !mek.key.fromMe && chatUpdate.type === 'notify') {
   return
 }
 if (mek.key.id.startsWith('BAE5') && mek.key.id.length === 16) return
-console.log('Processing message from:', mek.key.remoteJid) // Debug log
 m = smsg(client, mek,)
 require("./neko")(client, m, chatUpdate,)
 } catch (err) {
