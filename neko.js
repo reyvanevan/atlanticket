@@ -1013,8 +1013,6 @@ Silahkan tunggu konfirmasi dari admin.`;
 > Waktu : ${new Date().toLocaleString('id-ID')}
 ┈ׅ──ۄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-🔗 Link: ${imageUrl}
-
 *Untuk melihat bukti & verifikasi:*
 \`.show ${refID}\`
 
@@ -1024,9 +1022,19 @@ Silahkan tunggu konfirmasi dari admin.`;
 *Untuk reject:*
 \`.reject ${refID} [alasan]\``;
 
-    // Send to owner
+    // Send to owner dengan gambar
     for (const own of global.owner) {
-      client.sendMessage(own + '@s.whatsapp.net', { text: adminNotif }, { quoted: m });
+      try {
+        const imageBuffer = await getBuffer(imageUrl);
+        await client.sendMessage(own + '@s.whatsapp.net', { 
+          image: imageBuffer,
+          caption: adminNotif
+        }, { quoted: m });
+      } catch (imgErr) {
+        // Fallback jika gagal download gambar, kirim text saja
+        console.log('⚠️ Gagal send image ke admin, fallback ke text:', imgErr.message);
+        await client.sendMessage(own + '@s.whatsapp.net', { text: `${adminNotif}\n\n🔗 Link: ${imageUrl}` }, { quoted: m });
+      }
     }
 
   } catch (err) {
