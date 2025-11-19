@@ -5,7 +5,7 @@ if (!global.crypto) {
 }
 
 require('./db/config')
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, generateForwardMessageContent, prepareWAMessageMedia, generateWAMessageFromContent, generateMessageID, downloadContentFromMessage, /*makeInMemoryStore,*/ jidDecode, getAggregateVotesInPollMessage, proto } = require("baileys-mod")
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, generateForwardMessageContent, prepareWAMessageMedia, generateWAMessageFromContent, generateMessageID, downloadContentFromMessage, /*makeInMemoryStore,*/ jidDecode, getAggregateVotesInPollMessage, proto } = require("@whiskeysockets/baileys")
 const fs = require('fs')
 const pino = require('pino')
 const chalk = require('chalk')
