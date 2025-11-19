@@ -943,12 +943,13 @@ User kirim gambar transfer, terus balas dengan:
       userName = global.db.users[m.sender].nama;
     }
 
-    // Extract nomor HP dari JID (fallback jika ada)
-    let phoneNumber = extractPhoneNumber(m.sender);
-    // Pastikan format valid, jika tidak gunakan generic
-    if (!/^62\d{9,12}$/.test(phoneNumber)) {
-      phoneNumber = 'Tidak Terdeteksi';
-    }
+    // Extract nomor HP dari m.sender secara langsung (SEBELUM di-extract dari JID)
+    // Format m.sender: 6281224258870@s.whatsapp.net atau 161447921340608@lid
+    let phoneNumber = m.sender.split('@')[0];
+    
+    // Log untuk debug
+    console.log(color(`[BUKTI_TRANSFER] m.sender: ${m.sender}`, 'cyan'));
+    console.log(color(`[BUKTI_TRANSFER] Extracted phone: ${phoneNumber}`, 'cyan'));
 
     global.pendingPayments[refID] = {
       refID: refID,
@@ -1176,8 +1177,9 @@ case 'approve_bukti': {
 
 ✅ Tiket sudah dikirim ke user`);
 
-    // Extract nomor HP dari JID dengan normalisasi
-    let phoneNumber = extractPhoneNumber(userJid);
+    // Gunakan nomor HP yang sudah tersimpan di data.userPhone (dari saat bukti dikirim)
+    // Jangan re-extract karena bisa jadi corrupted
+    const phoneNumber = data.userPhone;
     
     // Simpan ke Firestore
     const firestore = admin.firestore();
