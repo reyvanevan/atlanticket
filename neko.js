@@ -943,13 +943,39 @@ User kirim gambar transfer, terus balas dengan:
       userName = global.db.users[m.sender].nama;
     }
 
-    // Extract nomor HP dari m.sender secara langsung (SEBELUM di-extract dari JID)
-    // Format m.sender: 6281224258870@s.whatsapp.net atau 161447921340608@lid
-    let phoneNumber = m.sender.split('@')[0];
+    // Extract nomor HP dari berbagai sumber karena m.sender bisa corrupted
+    // Prioritas: 1) global.db.users (jika ada), 2) m.key.participant/remoteJid, 3) pushname parsing
+    let phoneNumber = null;
     
-    // Log untuk debug
-    console.log(color(`[BUKTI_TRANSFER] m.sender: ${m.sender}`, 'cyan'));
-    console.log(color(`[BUKTI_TRANSFER] Extracted phone: ${phoneNumber}`, 'cyan'));
+    // Log untuk debug - cek semua sumber
+    console.log(color(`[BUKTI_TRANSFER] DEBUG INFO:`, 'cyan'));
+    console.log(color(`  m.sender: ${m.sender}`, 'cyan'));
+    console.log(color(`  m.key.remoteJid: ${m.key?.remoteJid}`, 'cyan'));
+    console.log(color(`  m.key.participant: ${m.key?.participant}`, 'cyan'));
+    console.log(color(`  m.from: ${m.from}`, 'cyan'));
+    
+    // Try dari global.db.users dulu (yang paling reliable)
+    if (global.db.users && global.db.users[m.sender]) {
+      // Jika ada stored data, cek apakah ada nomor yang pernah tersimpan
+      const storedUser = global.db.users[m.sender];
+      // Coba extract dari JID yang tersimpan atau gunakan yang ada
+      const jidParts = m.sender.split('@')[0];
+      if (jidParts && jidParts.length > 0) {
+        phoneNumber = jidParts;
+      }
+    }
+    
+    // Fallback: coba dari m.key.remoteJid
+    if (!phoneNumber && m.key?.remoteJid) {
+      phoneNumber = m.key.remoteJid.split('@')[0];
+    }
+    
+    // Fallback terakhir: extract dari m.sender
+    if (!phoneNumber) {
+      phoneNumber = m.sender.split('@')[0];
+    }
+    
+    console.log(color(`[BUKTI_TRANSFER] Final extracted phone: ${phoneNumber}`, 'cyan'));
 
     global.pendingPayments[refID] = {
       refID: refID,
@@ -1319,7 +1345,25 @@ case 'setbot': {
       break
        
     
-    case 'owner': {
+    case 'debug_jid': {
+  if (!isOwner) return m.reply('❌ Hanya owner!');
+  
+  const debugInfo = `📋 *DEBUG JID INFO*
+
+m.sender: ${m.sender}
+m.from: ${m.from}
+m.key.remoteJid: ${m.key?.remoteJid}
+m.key.participant: ${m.key?.participant}
+pushname: ${pushname}
+
+Global DB:
+${JSON.stringify(global.db.users?.[m.sender] || {}, null, 2)}`;
+
+  m.reply(debugInfo);
+  break;
+}
+
+case 'owner': {
     var owner_Nya = `${global.nomerOwner}@s.whatsapp.net`;
 
     // Sending the contact
