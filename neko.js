@@ -471,6 +471,115 @@ function saveDatabase(db) {
       m.body = m.body || ''
       
     switch (command) {
+
+case 'menu': {
+  const menuText = `
+╔═══════════════════════════════════════╗
+║   🎫 TIKET KONSER ATLANTICKET 🎫    ║
+╠═══════════════════════════════════════╣
+║                                       ║
+║  Pilih konser yang ingin Anda beli:   ║
+║                                       ║
+║  1️⃣  Konser Artist A                  ║
+║     📅 5 Desember 2025                ║
+║     💵 Rp 500.000                     ║
+║                                       ║
+║  2️⃣  Konser Artist B                  ║
+║     📅 12 Desember 2025               ║
+║     💵 Rp 750.000                     ║
+║                                       ║
+║  3️⃣  Konser Artist C                  ║
+║     📅 20 Desember 2025               ║
+║     💵 Rp 600.000                     ║
+║                                       ║
+╠═══════════════════════════════════════╣
+║  Balas dengan nomor (1/2/3) untuk    ║
+║  melihat detail & memesan tiket       ║
+╚═══════════════════════════════════════╝
+  `;
+  m.reply(menuText);
+  break;
+}
+
+case 'order': {
+  if (!text || isNaN(text)) {
+    return m.reply('Format salah!\nGunakan: .order [nomor]\nContoh: .order 1');
+  }
+  
+  const konserData = {
+    1: {
+      nama: 'Konser Artist A',
+      tanggal: '5 Desember 2025',
+      harga: 500000,
+      lokasi: 'Jakarta Convention Center',
+      jam: '19:00 WIB'
+    },
+    2: {
+      nama: 'Konser Artist B', 
+      tanggal: '12 Desember 2025',
+      harga: 750000,
+      lokasi: 'Istora Senayan',
+      jam: '20:00 WIB'
+    },
+    3: {
+      nama: 'Konser Artist C',
+      tanggal: '20 Desember 2025',
+      harga: 600000,
+      lokasi: 'Harmony Stadium',
+      jam: '19:30 WIB'
+    }
+  };
+
+  const konser = konserData[text];
+  if (!konser) return m.reply('❌ Nomor konser tidak valid! Gunakan .menu untuk melihat pilihan.');
+
+  const orderText = `
+╔════════════════════════════════════════╗
+║        📋 DETAIL TIKET KONSER         ║
+╠════════════════════════════════════════╣
+║                                        ║
+║  🎤 Event: ${konser.nama}
+║  📅 Tanggal: ${konser.tanggal}
+║  🕐 Jam: ${konser.jam}
+║  📍 Lokasi: ${konser.lokasi}
+║  💰 Harga: Rp ${konser.harga.toLocaleString('id-ID')}
+║                                        ║
+╠════════════════════════════════════════╣
+║  Untuk membeli, hubungi admin:        ║
+║  ${global.ownerName}                        ║
+║  wa.me/${global.nomerOwner}            ║
+║                                        ║
+║  atau balas .checkout untuk lanjut    ║
+╚════════════════════════════════════════╝
+  `;
+  m.reply(orderText);
+  break;
+}
+
+case 'checkout': {
+  const checkoutText = `
+╔════════════════════════════════════════╗
+║       💳 PROSES CHECKOUT TIKET        ║
+╠════════════════════════════════════════╣
+║                                        ║
+║  Silahkan lakukan pembayaran ke:      ║
+║                                        ║
+║  💳 Transfer: ATM/E-Banking           ║
+║  👨‍💼 Rekening: ${global.nomerOwner}          ║
+║  📲 QRIS: ${global.linkQRIS || 'hubungi admin'}
+║                                        ║
+║  ⚠️  Verifikasi pembayaran otomatis   ║
+║     dalam 5 menit                    ║
+║                                        ║
+║  Jika ada pertanyaan:                 ║
+║  Hubungi: ${global.ownerName}         ║
+║  ${global.linkGC}
+║                                        ║
+╚════════════════════════════════════════╝
+  `;
+  m.reply(checkoutText);
+  break;
+}
 			
 case 'bot': {
   let pesanBot;
