@@ -885,10 +885,20 @@ User kirim gambar transfer, terus balas dengan:
       global.pendingPayments = {};
     }
 
+    // Get user name from various sources
+    let userName = m.pushName || 'Unknown User';
+    if (global.db.users && global.db.users[m.sender] && global.db.users[m.sender].nama) {
+      userName = global.db.users[m.sender].nama;
+    }
+
+    // Extract nomor HP dari JID
+    const phoneNumber = m.sender.split('@')[0];
+
     global.pendingPayments[refID] = {
       refID: refID,
       userJid: m.sender,
-      userName: m.pushName,
+      userName: userName,
+      userPhone: phoneNumber,
       jumlah: jumlah,
       catatan: catatan,
       mediaPath: imageUrl,
@@ -1038,6 +1048,9 @@ case 'approve_bukti': {
 
 ✅ Tiket sudah dikirim ke user`);
 
+    // Extract nomor HP dari JID
+    const phoneNumber = userJid.split('@')[0];
+    
     // Simpan ke Firestore
     const firestore = admin.firestore();
     await firestore.collection('tickets').doc(ticketID).set({
@@ -1045,6 +1058,7 @@ case 'approve_bukti': {
       refID: refID,
       buyerJid: userJid,
       buyerName: data.userName,
+      buyerPhone: phoneNumber,
       konser: 'UMBandung Fest',
       harga: data.jumlah,
       qrCode: qrImagePath,
@@ -1180,115 +1194,6 @@ case 'setbot': {
 
     break;
 }
-
-
-      // ============= BUTTON MESSAGE TEST COMMANDS =============
-      case 'testbutton':
-      case 'buttondemo': {
-        const { sendButtonMessage } = require('./lib/buttonMessage');
-        
-        try {
-          await sendButtonMessage(client, m.chat, {
-            text: '🔘 *Button Message Demo*\n\nPilih salah satu opsi di bawah ini:',
-            footer: '© atlanticket 2025',
-            buttons: [
-              { id: 'btn1', text: '✈️ Cek Tiket' },
-              { id: 'btn2', text: '💰 Cek Saldo' },
-              { id: 'btn3', text: '📞 Contact Admin' }
-            ],
-            quoted: m
-          });
-          
-          m.reply('✅ Button message sent! (Legacy style - may be deprecated)');
-        } catch (error) {
-          m.reply(`❌ Error: ${error.message}\n\nℹ️ Button messages mungkin tidak support di device kamu.`);
-        }
-        break;
-      }
-
-      case 'testlist':
-      case 'listdemo': {
-        const { sendListMessage } = require('./lib/buttonMessage');
-        
-        try {
-          await sendListMessage(client, m.chat, {
-            text: '📱 *List Message Demo*\n\nPilih kategori tiket yang kamu inginkan:',
-            title: '🎫 Menu Tiket atlanticket',
-            buttonText: '📋 Lihat Pilihan',
-            footer: 'Pilih salah satu untuk melanjutkan',
-            sections: [
-              {
-                title: '✈️ Tiket Pesawat',
-                rows: [
-                  { rowId: 'ekonomi', title: 'Kelas Ekonomi', description: 'Harga terjangkau untuk perjalanan hemat' },
-                  { rowId: 'bisnis', title: 'Kelas Bisnis', description: 'Kenyamanan premium dengan layanan ekstra' },
-                  { rowId: 'first', title: 'Kelas First', description: 'Luxury experience dengan fasilitas terbaik' }
-                ]
-              },
-              {
-                title: '🚢 Tiket Kapal',
-                rows: [
-                  { rowId: 'ferry', title: 'Ferry Reguler', description: 'Penyeberangan ekonomis' },
-                  { rowId: 'fastboat', title: 'Fast Boat', description: 'Cepat dan nyaman' }
-                ]
-              }
-            ],
-            quoted: m
-          });
-          
-          m.reply('✅ List message sent successfully!');
-        } catch (error) {
-          m.reply(`❌ Error: ${error.message}\n\nℹ️ List messages mungkin tidak support di device kamu.`);
-        }
-        break;
-      }
-
-      case 'testinteractive':
-      case 'interactivedemo': {
-        const { sendInteractiveButton } = require('./lib/buttonMessage');
-        
-        try {
-          await sendInteractiveButton(client, m.chat, {
-            title: '🚀 Interactive Message',
-            text: 'Ini adalah interactive message dengan native flow buttons (modern style)',
-            footer: 'Powered by atlanticket',
-            buttons: [
-              { id: 'opt1', text: '⭐ Option 1' },
-              { id: 'opt2', text: '💎 Option 2' }
-            ],
-            quoted: m
-          });
-          
-          m.reply('✅ Interactive button sent! (Modern native flow style)');
-        } catch (error) {
-          m.reply(`❌ Error: ${error.message}\n\nℹ️ Interactive messages mungkin tidak support di device kamu.`);
-        }
-        break;
-      }
-
-      case 'testtemplate':
-      case 'templatedemo': {
-        const { sendTemplateMessage } = require('./lib/buttonMessage');
-        
-        try {
-          await sendTemplateMessage(client, m.chat, {
-            text: '📨 *Template Message Demo*\n\nTemplate message dengan quick reply buttons (max 4)',
-            footer: 'atlanticket - Booking Made Easy',
-            buttons: [
-              { id: 'tpl1', text: '🎫 Book Now' },
-              { id: 'tpl2', text: '💳 Payment' },
-              { id: 'tpl3', text: '📞 Support' },
-              { id: 'tpl4', text: '❓ Help' }
-            ],
-            quoted: m
-          });
-          
-          m.reply('✅ Template message sent!');
-        } catch (error) {
-          m.reply(`❌ Error: ${error.message}\n\nℹ️ Template messages mungkin tidak support di device kamu.`);
-        }
-        break;
-      }
 
       default:
     }
