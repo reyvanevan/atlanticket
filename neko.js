@@ -562,32 +562,39 @@ _Pembayaran tidak terverifikasi - hubungi user_`;
     switch (command) {
 
 case 'menu': {
-  const menuText = `🎫 *TIKET KONSER ATLANTICKET* 🎫
+  try {
+    const firestore = admin.firestore();
+    const konserSnapshot = await firestore.collection('concerts').where('status', '==', 'aktif').get();
+    
+    if (konserSnapshot.empty) {
+      return m.reply('❌ Belum ada konser yang tersedia. Hubungi admin!');
+    }
+
+    let menuText = `🎫 *TIKET KONSER ATLANTICKET* 🎫
 
 > Pilih konser yang ingin Anda beli:
-┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈\n`;
 
-🎤 *KONSER ARTIST A*
-> Tanggal : 5 Desember 2025
-> Harga : Rp 500.000
+    let index = 1;
+    konserSnapshot.forEach(doc => {
+      const data = doc.data();
+      menuText += `\n${index}️⃣ *${data.nama}*
+> Tanggal : ${data.tanggal}
+> Jam : ${data.jam}
+> Harga : Rp ${data.harga.toLocaleString('id-ID')}
+> Stok : ${data.stokTersisa} tiket
 > Status : ✅
-┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈`;
+      index++;
+    });
 
-🎤 *KONSER ARTIST B*
-> Tanggal : 12 Desember 2025
-> Harga : Rp 750.000
-> Status : ✅
-┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
-
-🎤 *KONSER ARTIST C*
-> Tanggal : 20 Desember 2025
-> Harga : Rp 600.000
-> Status : ✅
-┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
-
-> Balas dengan: .order 1/2/3
+    menuText += `\n> Balas dengan: .order [nomor]
 > Untuk melihat detail & memesan tiket`;
-  m.reply(menuText);
+
+    m.reply(menuText);
+  } catch (err) {
+    m.reply(`❌ Error: ${err.message}`);
+  }
   break;
 }
 
@@ -596,34 +603,27 @@ case 'order': {
     return m.reply('Format salah!\nGunakan: .order [nomor]\nContoh: .order 1');
   }
   
-  const konserData = {
-    1: {
-      nama: 'Konser Artist A',
-      tanggal: '5 Desember 2025',
-      harga: 500000,
-      lokasi: 'Jakarta Convention Center',
-      jam: '19:00 WIB'
-    },
-    2: {
-      nama: 'Konser Artist B', 
-      tanggal: '12 Desember 2025',
-      harga: 750000,
-      lokasi: 'Istora Senayan',
-      jam: '20:00 WIB'
-    },
-    3: {
-      nama: 'Konser Artist C',
-      tanggal: '20 Desember 2025',
-      harga: 600000,
-      lokasi: 'Harmony Stadium',
-      jam: '19:30 WIB'
+  try {
+    const firestore = admin.firestore();
+    const konserSnapshot = await firestore.collection('concerts').where('status', '==', 'aktif').get();
+    
+    if (konserSnapshot.empty) {
+      return m.reply('❌ Belum ada konser tersedia!');
     }
-  };
 
-  const konser = konserData[text];
-  if (!konser) return m.reply('❌ Nomor konser tidak valid! Gunakan .menu untuk melihat pilihan.');
+    const konserArray = [];
+    konserSnapshot.forEach(doc => {
+      konserArray.push({ id: doc.id, ...doc.data() });
+    });
 
-  const orderText = `📋 *DETAIL TIKET KONSER*
+    const konserIndex = parseInt(text) - 1;
+    if (konserIndex < 0 || konserIndex >= konserArray.length) {
+      return m.reply(`❌ Nomor konser tidak valid! Gunakan .menu untuk melihat pilihan.`);
+    }
+
+    const konser = konserArray[konserIndex];
+
+    const orderText = `📋 *DETAIL TIKET KONSER*
 
 🎤 *${konser.nama}*
 > Event : ${konser.nama}
@@ -631,14 +631,19 @@ case 'order': {
 > Jam : ${konser.jam}
 > Lokasi : ${konser.lokasi}
 > Harga : Rp ${konser.harga.toLocaleString('id-ID')}
-┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+> Stok : ${konser.stokTersisa} tiket
+> Info : ${konser.deskripsi}
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──�� ┈
 
 > Untuk membeli, hubungi admin:
 > ${global.ownerName}
 > wa.me/${global.nomerOwner}
 
 > atau balas .checkout untuk lanjut`;
-  m.reply(orderText);
+    m.reply(orderText);
+  } catch (err) {
+    m.reply(`❌ Error: ${err.message}`);
+  }
   break;
 }
 
@@ -667,6 +672,151 @@ case 'checkout': {
 > Admin : ${global.ownerName}
 > Group : ${global.linkGC}`;
   m.reply(checkoutText);
+  break;
+}
+
+case 'setup_konser': {
+  if (!isOwner) return m.reply('❌ Hanya owner yang bisa setup konser!');
+  
+  const setupGuide = `📋 *FORM SETUP KONSER*
+
+Silahkan isi data konser dengan format di bawah:
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+*Kirim dengan format:*
+\`.setup_konser\` [nama] | [tgl] | [jam] | [lokasi] | [harga] | [stok] | [deskripsi]
+
+*Contoh:*
+\`.setup_konser UMBandung Fest | 29/11/2025 | 10:00 WIB | Lapang Adymic UM Bandung | 25000 | 2500 | UMBandung Festival\`
+
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+*Format Detail:*
+> [nama] = Nama konser/event
+> [tgl] = DD/MM/YYYY
+> [jam] = HH:mm WIB
+> [lokasi] = Nama venue
+> [harga] = Nominal (angka)
+> [stok] = Jumlah tiket
+> [deskripsi] = Info tambahan
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈`;
+
+  if (!text || !text.includes('|')) {
+    return m.reply(setupGuide);
+  }
+
+  try {
+    const parts = text.split('|').map(p => p.trim());
+    
+    if (parts.length !== 7) {
+      return m.reply(`❌ Format salah!\nHarus 7 parameter, tapi yang dikirim: ${parts.length}\n\n${setupGuide}`);
+    }
+
+    const [nama, tanggal, jam, lokasi, harga, stok, deskripsi] = parts;
+    
+    // Validasi format
+    if (!/^\d{2}\/\d{2}\/\d{4}$/.test(tanggal)) {
+      return m.reply('❌ Format tanggal salah! Gunakan DD/MM/YYYY\nContoh: 29/11/2025');
+    }
+    
+    if (!/^\d{2}:\d{2}\s*WIB$/i.test(jam)) {
+      return m.reply('❌ Format jam salah! Gunakan HH:mm WIB\nContoh: 10:00 WIB');
+    }
+    
+    const hargaNum = parseInt(harga);
+    const stokNum = parseInt(stok);
+    
+    if (isNaN(hargaNum) || isNaN(stokNum)) {
+      return m.reply('❌ Harga dan stok harus berupa angka!');
+    }
+
+    // Preview data sebelum disimpan
+    const previewText = `✅ *PREVIEW DATA KONSER*
+
+> Nama : ${nama}
+> Tanggal : ${tanggal}
+> Jam : ${jam}
+> Lokasi : ${lokasi}
+> Harga : Rp ${hargaNum.toLocaleString('id-ID')}
+> Stok : ${stokNum} tiket
+> Deskripsi : ${deskripsi}
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+*Konfirmasi?*
+Balas dengan: \`.confirm_setup\` untuk lanjut
+atau \`.batal\` untuk batalkan`;
+
+    // Simpan ke temporary storage
+    global.setupTempData = {
+      nama, tanggal, jam, lokasi, hargaNum, stokNum, deskripsi,
+      createdBy: m.sender,
+      createdAt: new Date()
+    };
+
+    m.reply(previewText);
+
+  } catch (err) {
+    m.reply(`❌ Error: ${err.message}`);
+  }
+  break;
+}
+
+case 'confirm_setup': {
+  if (!isOwner) return m.reply('❌ Hanya owner yang bisa!');
+  if (!global.setupTempData) return m.reply('❌ Tidak ada data setup yang pending!');
+
+  try {
+    const firestore = admin.firestore();
+    const { nama, tanggal, jam, lokasi, hargaNum, stokNum, deskripsi, createdBy, createdAt } = global.setupTempData;
+
+    // Generate konser ID
+    const konserRef = firestore.collection('concerts').doc();
+    const konserData = {
+      konserID: konserRef.id,
+      nama: nama,
+      tanggal: tanggal,
+      jam: jam,
+      lokasi: lokasi,
+      harga: hargaNum,
+      stokAwal: stokNum,
+      stokTersisa: stokNum,
+      deskripsi: deskripsi,
+      status: 'aktif',
+      dibuat: new Date(),
+      dibuatOleh: createdBy,
+      diupdate: new Date()
+    };
+
+    await konserRef.set(konserData);
+
+    const successText = `✅ *KONSER BERHASIL DISIMPAN!*
+
+> Konser ID : ${konserRef.id}
+> Nama : ${nama}
+> Tanggal : ${tanggal}
+> Stok : ${stokNum} tiket
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+Sekarang user bisa melihat dengan: \`.menu\`
+Dan pesan tiket dengan: \`.order\``;
+
+    m.reply(successText);
+    
+    // Hapus temporary data
+    delete global.setupTempData;
+
+  } catch (err) {
+    m.reply(`❌ Error menyimpan data: ${err.message}`);
+  }
+  break;
+}
+
+case 'batal': {
+  if (global.setupTempData) {
+    delete global.setupTempData;
+    m.reply('❌ Setup konser dibatalkan!');
+  } else {
+    m.reply('❌ Tidak ada yang perlu dibatalkan!');
+  }
   break;
 }
 			
