@@ -913,6 +913,22 @@ User kirim gambar transfer, terus balas dengan:
       status: 'pending'
     };
 
+    // Simpan ke Firestore
+    const firestore = admin.firestore();
+    await firestore.collection('bukti_transfer').doc(refID).set({
+      refID: refID,
+      userJid: m.sender,
+      userName: userName,
+      userPhone: phoneNumber,
+      jumlah: jumlah,
+      catatan: catatan,
+      mediaPath: imageUrl,
+      createdAt: new Date(),
+      status: 'pending',
+      approvedAt: null,
+      approvedBy: null
+    });
+
     // Konfirmasi ke user
     const confirmText = `✅ *BUKTI TRANSFER DITERIMA*
 
@@ -1081,6 +1097,14 @@ case 'approve_bukti': {
       catatan: data.catatan
     });
 
+    // Update status di Firestore bukti_transfer
+    await firestore.collection('bukti_transfer').doc(refID).update({
+      status: 'approved',
+      approvedAt: new Date(),
+      approvedBy: m.sender,
+      ticketID: ticketID
+    });
+
     // Update status
     data.status = 'approved';
     global.pendingPayments[refID] = data;
@@ -1129,6 +1153,15 @@ wa.me/${global.nomerOwner}`;
 ┈ׅ──˄─꯭─꯭──────꯭ׄ──ׅ┈
 
 ✅ Notif penolakan sudah dikirim ke user`);
+
+    // Update status di Firestore
+    const firestore = admin.firestore();
+    await firestore.collection('bukti_transfer').doc(refID).update({
+      status: 'rejected',
+      rejectedAt: new Date(),
+      rejectedBy: m.sender,
+      alasan: alasan
+    });
 
     // Update status
     data.status = 'rejected';
