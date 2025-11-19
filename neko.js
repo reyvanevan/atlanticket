@@ -1001,7 +1001,9 @@ Silahkan tunggu konfirmasi dari admin.`;
 > Jumlah : Rp ${jumlah.toLocaleString('id-ID')}
 > Catatan : ${catatan}
 > Waktu : ${new Date().toLocaleString('id-ID')}
-┈ׅ──��─꯭─꯭──────꯭ׄ──ׅ┈
+┈ׅ──ۄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+🔗 Link: ${imageUrl}
 
 *Untuk melihat bukti & verifikasi:*
 \`.lihat_bukti ${refID}\`
@@ -1024,6 +1026,7 @@ Silahkan tunggu konfirmasi dari admin.`;
   break;
 }
 
+case 'show':
 case 'lihat_bukti': {
   if (!isOwner) return m.reply('❌ Hanya owner yang bisa!');
   
@@ -1047,6 +1050,8 @@ case 'lihat_bukti': {
 > Catatan : ${data.catatan}
 > Waktu : ${data.createdAt.toLocaleString('id-ID')}
 ┈ׅ──ۄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+🔗 Link: ${data.mediaPath}
 
 *Status: ${data.status.toUpperCase()}*`
       }, { quoted: m });
