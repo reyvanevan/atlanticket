@@ -943,39 +943,23 @@ User kirim gambar transfer, terus balas dengan:
       userName = global.db.users[m.sender].nama;
     }
 
-    // Extract nomor HP dari berbagai sumber karena m.sender bisa corrupted
-    // Prioritas: 1) global.db.users (jika ada), 2) m.key.participant/remoteJid, 3) pushname parsing
+    // Extract nomor HP dari m.key.senderPn (Sender Phone Number) - paling reliable!
+    // Format: 6289653544913@s.whatsapp.net
     let phoneNumber = null;
     
-    // Log untuk debug - cek semua sumber
-    console.log(color(`[BUKTI_TRANSFER] DEBUG INFO:`, 'cyan'));
-    console.log(color(`  m.sender: ${m.sender}`, 'cyan'));
-    console.log(color(`  m.key.remoteJid: ${m.key?.remoteJid}`, 'cyan'));
-    console.log(color(`  m.key.participant: ${m.key?.participant}`, 'cyan'));
-    console.log(color(`  m.from: ${m.from}`, 'cyan'));
-    
-    // Try dari global.db.users dulu (yang paling reliable)
-    if (global.db.users && global.db.users[m.sender]) {
-      // Jika ada stored data, cek apakah ada nomor yang pernah tersimpan
-      const storedUser = global.db.users[m.sender];
-      // Coba extract dari JID yang tersimpan atau gunakan yang ada
-      const jidParts = m.sender.split('@')[0];
-      if (jidParts && jidParts.length > 0) {
-        phoneNumber = jidParts;
-      }
+    // Priority 1: m.key.senderPn (MOST RELIABLE - tidak pernah corrupted)
+    if (m.key?.senderPn) {
+      phoneNumber = m.key.senderPn.split('@')[0];
     }
     
-    // Fallback: coba dari m.key.remoteJid
-    if (!phoneNumber && m.key?.remoteJid) {
-      phoneNumber = m.key.remoteJid.split('@')[0];
-    }
-    
-    // Fallback terakhir: extract dari m.sender
+    // Fallback: extract dari m.sender jika senderPn tidak ada
     if (!phoneNumber) {
       phoneNumber = m.sender.split('@')[0];
     }
     
-    console.log(color(`[BUKTI_TRANSFER] Final extracted phone: ${phoneNumber}`, 'cyan'));
+    // Log untuk debug
+    console.log(color(`[BUKTI_TRANSFER] m.key.senderPn: ${m.key?.senderPn}`, 'cyan'));
+    console.log(color(`[BUKTI_TRANSFER] Extracted phone: ${phoneNumber}`, 'cyan'));
 
     global.pendingPayments[refID] = {
       refID: refID,
