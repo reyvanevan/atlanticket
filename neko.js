@@ -1346,7 +1346,18 @@ case 'setbot': {
        
     
     case 'debug_jid': {
-  if (!isOwner) return m.reply('❌ Hanya owner!');
+  //if (!isOwner) return m.reply('❌ Hanya owner!');
+  
+  // Log semua info ke console
+  console.log(color(`\n[DEBUG_JID] Full message object keys:`, 'yellow'));
+  console.log(color(`  ${JSON.stringify(Object.keys(m), null, 2)}`, 'yellow'));
+  
+  console.log(color(`\n[DEBUG_JID] m.key properties:`, 'yellow'));
+  console.log(color(`  ${JSON.stringify(m.key, null, 2)}`, 'yellow'));
+  
+  console.log(color(`\n[DEBUG_JID] m.chat: ${m.chat}`, 'yellow'));
+  console.log(color(`[DEBUG_JID] m.key.fromMe: ${m.key?.fromMe}`, 'yellow'));
+  console.log(color(`[DEBUG_JID] sender variable: ${sender}`, 'yellow'));
   
   const debugInfo = `📋 *DEBUG JID INFO*
 
@@ -1354,10 +1365,14 @@ m.sender: ${m.sender}
 m.from: ${m.from}
 m.key.remoteJid: ${m.key?.remoteJid}
 m.key.participant: ${m.key?.participant}
+m.chat: ${m.chat}
+sender variable: ${sender}
 pushname: ${pushname}
 
 Global DB:
-${JSON.stringify(global.db.users?.[m.sender] || {}, null, 2)}`;
+${JSON.stringify(global.db.users?.[m.sender] || {}, null, 2)}
+
+Lihat console untuk Object.keys!`;
 
   m.reply(debugInfo);
   break;
