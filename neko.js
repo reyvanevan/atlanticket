@@ -583,16 +583,16 @@ case 'setbot': {
               {
                 title: '✈️ Tiket Pesawat',
                 rows: [
-                  { id: 'ekonomi', title: 'Kelas Ekonomi', description: 'Harga terjangkau untuk perjalanan hemat' },
-                  { id: 'bisnis', title: 'Kelas Bisnis', description: 'Kenyamanan premium dengan layanan ekstra' },
-                  { id: 'first', title: 'Kelas First', description: 'Luxury experience dengan fasilitas terbaik' }
+                  { rowId: 'ekonomi', title: 'Kelas Ekonomi', description: 'Harga terjangkau untuk perjalanan hemat' },
+                  { rowId: 'bisnis', title: 'Kelas Bisnis', description: 'Kenyamanan premium dengan layanan ekstra' },
+                  { rowId: 'first', title: 'Kelas First', description: 'Luxury experience dengan fasilitas terbaik' }
                 ]
               },
               {
                 title: '🚢 Tiket Kapal',
                 rows: [
-                  { id: 'ferry', title: 'Ferry Reguler', description: 'Penyeberangan ekonomis' },
-                  { id: 'fastboat', title: 'Fast Boat', description: 'Cepat dan nyaman' }
+                  { rowId: 'ferry', title: 'Ferry Reguler', description: 'Penyeberangan ekonomis' },
+                  { rowId: 'fastboat', title: 'Fast Boat', description: 'Cepat dan nyaman' }
                 ]
               }
             ],
