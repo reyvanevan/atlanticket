@@ -9,8 +9,6 @@ const pino = require('pino')
 const pushname = m.pushName || "No Name"
 let defaultMarkupPercentage = 0.01; 
 const { firefox } = require('playwright');
-const { handleManualCleanup, handleCheckAllPending, handleDailyReport } = require('./scheduler');
-const { handleOrderCompleteCommand } = require('./ordercomplete_handler');
 
 const admin = require('firebase-admin');
 const serviceAccount = require('./db/serviceAccountKey.json');
@@ -83,9 +81,6 @@ const crypto = require('crypto')
 const moment = require('moment-timezone')
 const { color, bgcolor } = require('./lib/color')
 
-const jsonFilePath = './db/custom_commands.json';
-const botgroupFile = './db/botgroup.json';
-const configPath = './db/groupConfig.json';
 const { exec, spawn, execSync } = require("child_process")
 const { smsg, tanggal, getTime, isUrl, sleep, clockString, runtime, fetchJson, getBuffer, jsonformat, format, parseMention, getRandom, getGroupAdmins, generateUniqueRefID, connect } = require('./lib/myfunc')
 
@@ -167,20 +162,7 @@ module.exports = client = async (client, m, chatUpdate, store, db_respon_list) =
     const hariini = moment.tz('Asia/Jakarta').locale('id').format('dddd,DD MMMM YYYY');
     const ticketsData = './db/tickets.json';
     const db = admin.firestore();
-    const pathUser = './db/user_down.json'
-    const afk = require('./lib/afk');
-    const _afk = JSON.parse(fs.readFileSync('./db/afk.json'));
-      const ms = require('parse-ms');
-      const fetch = require('node-fetch');
-      const { createCanvas, loadImage } = require("canvas");
-      const { prepareWAMessageMedia } = require('@whiskeysockets/baileys');
-      const moment2 = require('moment-timezone');
-      const QRCode = require('qrcode');
-    let localUserData = [];
-if (fs.existsSync(pathUser)) {
-  const rawData = fs.readFileSync(pathUser, 'utf8');
-  localUserData = JSON.parse(rawData);
-}
+
       
 //  const isCmd = body.startsWith(prefix)
       const isCmd = (body || '').startsWith(prefix)
@@ -205,7 +187,6 @@ const command = cleanBody.replace(prefix, '').trim().split(/ +/).shift().toLower
     const isBotAdmins = m.isGroup ? groupAdmins.includes(botNumber) : false
     const isAdmins = m.isGroup ? groupAdmins.includes(m.sender) : false
     const isGroup = m.key.remoteJid.endsWith('@g.us')
-    const isAfkOn = afk.checkAfkUser(m.sender, _afk)
     const time = moment(Date.now()).tz('Asia/Jakarta').locale('id').format('HH:mm z')
     const harisekarang = moment.tz('Asia/Jakarta').format('DD MMMM YYYY')
     const time1 = moment().tz('Asia/Jakarta').format('HH:mm:ss');
@@ -230,7 +211,6 @@ const command = cleanBody.replace(prefix, '').trim().split(/ +/).shift().toLower
     if (time1 < "03:00:00") {
       var ucapanWaktu1 = 'Malam'
     }
-    const poster = fs.readFileSync('./lib/poster.jpg')
     const content = JSON.stringify(m.message)
    
     const fdocc = {
@@ -298,27 +278,6 @@ function wrapText(text, maxLineLength) {
   }
   lines.push(text); // Tambahkan sisa teks
   return lines;
-}
-      function loadGroupConfig() {
-  try {
-    if (!fs.existsSync(configPath)) return {};
-    return JSON.parse(fs.readFileSync(configPath, 'utf8'));
-  } catch (e) {
-    console.error('âŒ Gagal load config grup:', e);
-    return {};
-  }
-}
-
-function saveGroupConfig(config) {
-  try {
-    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-  } catch (e) {
-    console.error('âŒ Gagal simpan config grup:', e);
-  }
-}
-
-function saveGroupConfig(config) {
-  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 }
 
 async function generateInvoiceWithBackground(data, backgroundPath, logoPath = null) {
@@ -440,7 +399,6 @@ async function generateInvoiceWithBackground(data, backgroundPath, logoPath = nu
     const owned = `${global.nomerOwner}@s.whatsapp.net`
     const numberQuery = text.replace(new RegExp("[()+-/ +/]", "gi"), "") + "@s.whatsapp.net"
     const kiw = sender.split("@")[0]
-    const isUser = pathUser.includes(m.kiw)
    const mentionByTag = (m && m.mtype === "extendedTextMessage" && m.message && m.message.extendedTextMessage && m.message.extendedTextMessage.contextInfo && m.message.extendedTextMessage.contextInfo.mentionedJid) ? m.message.extendedTextMessage.contextInfo.mentionedJid : [];
 	
 const Input = Array.isArray(mentionByTag) && mentionByTag.length > 0 ? mentionByTag[0] : (q ? numberQuery : false);
@@ -503,28 +461,6 @@ function saveDatabase(db) {
         console.error("Error saving database:", err.message);
     }
 }
-//FITUR AFK
-if (m.isGroup && !m.key.fromMe) {
-    let mentionUser = [...new Set([...(m.mentionedJid || []), ...(m.quoted ? [m.quoted.sender] : [])])]
-    for (let ment of mentionUser) {
-    if (afk.checkAfkUser(ment, _afk)) {
-    let getId2 = afk.getAfkId(ment, _afk)
-    let getReason2 = afk.getAfkReason(getId2, _afk)
-    let getTimee = Date.now() - afk.getAfkTime(getId2, _afk)
-    let heheh2 = ms(getTimee)
-    m.reply(`Jangan tag dia bang, orangnya lagi afk.\n\n*Alasan :* ${getReason2}\n*Sejak :* ${heheh2.hours} jam, ${heheh2.minutes} menit, ${heheh2.seconds} detik yg lalu\n`)
-    }
-    }
-	if (afk.checkAfkUser(m.sender, _afk)) {
-    let getId = afk.getAfkId(m.sender, _afk)
-    let getReason = afk.getAfkReason(getId, _afk)
-    let getTime = Date.now() - afk.getAfkTime(getId, _afk)
-    let heheh = ms(getTime)
-    _afk.splice(afk.getAfkPosition(m.sender, _afk), 1)
-    fs.writeFileSync('./db/afk.json', JSON.stringify(_afk))
-    client.sendTextWithMentions(m.chat, `@${m.sender.split('@')[0]} telah kembali dari afk\n\n*Alasan :* ${getReason}\n*Selama :* ${heheh.hours} jam ${heheh.minutes} menit ${heheh.seconds} detik\n`, m)
-    }
-}
 
       // middleware semua command di private chat, kecuali admin/owner
      /*
@@ -532,45 +468,13 @@ if (m.isGroup && !m.key.fromMe) {
           return;
       }
       */
-      //  Middleware untuk blokir command berdasarkan config grup
-const groupConfigs = loadGroupConfig();
-if (m.isGroup && groupConfigs[m.chat] && groupConfigs[m.chat].lockedCommands?.includes(command.toLowerCase())) {
-  return ;
-    //m.reply(`‼️ Command *${command}* sedang dinonaktifkan di grup ini.\n_Silahkan hubungi *Owner* untuk meminta group khusus Pemesanan Tiket Otomatis_`);
-}
       m.body = m.body || ''
       
     switch (command) {
-
-
-      case 'help': {
-         
-        const capt =
-          `_soon_`
-        client.sendMessage(m.chat, {
-          text: capt,
-          contextInfo: {
-            externalAdReply: {
-              title: `${global.botName}`,
-              thumbnailUrl: `${poster1}`,
-              sourceUrl: `${linkGC}`,
-              mediaType: 1,
-              renderLargerThumbnail: true
-            }
-          }
-        }, )
-      }
-      break
-
 			
 case 'bot': {
   let pesanBot;
   if (isGroup) {
-    // Cek apakah ada pesan bot spesifik untuk grup ini
-    let botgroup = {};
-    if (fs.existsSync(botgroupFile)) {
-      botgroup = JSON.parse(fs.readFileSync(botgroupFile));
-    }
     pesanBot = botgroup[m.chat] || global.bot; // fallback ke global.bot
   } else {
     pesanBot = global.bot;
@@ -606,14 +510,7 @@ case 'setbot': {
             {
     client.sendMessage(m.chat, { text: global.min }, { quoted: m });
     break;
-}
-            
- case 'pay':           
- case 'payment': {
-    const capt = `${pay}`;
-    client.sendMessage(m.chat, { image: { url: linkQRIS }, caption: capt }, { quoted: m });
-    break;
- }                     
+}               
  
       case 'getip': {
         if (!isOwner) return
@@ -647,32 +544,6 @@ case 'setbot': {
     break;
 }
 
-
-            case 'antilink': {
-  if (!isGroup) return m.reply(mess.group);
-  if (!isAdmins) return m.reply(mess.admin);
-  if (!isBotAdmins) return m.reply("Jadikan saya Admin dulu ya :)");
-  
-  const action = args[0]; // 'on' untuk mengaktifkan atau 'off' untuk menonaktifkan
-  
-  if (action === 'on') {
-    antilink.push(from);
-    fs.writeFileSync('./src/antilink.json', JSON.stringify(antilink, null, 2));
-    m.reply(`âœ… Sukses mengaktifkan fitur antilink di group *${groupMetadata.subject}*`);
-  } else if (action === 'off') {
-    const index = antilink.indexOf(from);
-    if (index !== -1) {
-      antilink.splice(index, 1);
-      fs.writeFileSync('./src/antilink.json', JSON.stringify(antilink, null, 2));
-      m.reply(`âœ… Sukses menonaktifkan fitur antilink di group *${groupMetadata.subject}*`);
-    } else {
-      m.reply(`Fitur antilink tidak aktif di group *${groupMetadata.subject}*.`);
-    }
-  } else {
-    m.reply('Gunakan "on" untuk mengaktifkan atau "off" untuk menonaktifkan fitur antilink.');
-  };
-break;
-};    
 
       default:
     }

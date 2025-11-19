@@ -5,7 +5,7 @@ if (!global.crypto) {
 }
 
 require('./db/config')
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, generateForwardMessageContent, prepareWAMessageMedia, generateWAMessageFromContent, generateMessageID, downloadContentFromMessage, /*makeInMemoryStore,*/ jidDecode, getAggregateVotesInPollMessage, proto } = require("@whiskeysockets/baileys")
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, generateForwardMessageContent, prepareWAMessageMedia, generateWAMessageFromContent, generateMessageID, downloadContentFromMessage, /*makeInMemoryStore,*/ jidDecode, getAggregateVotesInPollMessage, proto } = require("baileys-mod")
 const fs = require('fs')
 const pino = require('pino')
 const chalk = require('chalk')
@@ -34,7 +34,7 @@ day: 'numeric',
 month: 'long',
 year: 'numeric'
 })
-const usePairingCode = true
+const usePairingCode = false // Sementara pake QR dulu untuk testing AI icon
 
 const { smsg, isUrl, generateMessageTag, getBuffer, getSizeMedia, fetchJson, await, sleep } = require('./lib/myfunc')
 const question = (text) => {
