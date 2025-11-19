@@ -993,11 +993,11 @@ Silahkan tunggu konfirmasi dari admin.`;
 
     m.reply(confirmText);
 
-    // Kirim notif ke admin
+    // Kirim notif ke admin (gunakan userName dan phoneNumber yang sudah ter-extract dengan benar)
     const adminNotif = `📸 *BUKTI TRANSFER MASUK*
 
 > Kode Bukti : ${refID}
-> Dari : ${m.pushName} (${m.sender.split('@')[0]})
+> Dari : ${userName} (${phoneNumber})
 > Jumlah : Rp ${jumlah.toLocaleString('id-ID')}
 > Catatan : ${catatan}
 > Waktu : ${new Date().toLocaleString('id-ID')}
@@ -1006,13 +1006,13 @@ Silahkan tunggu konfirmasi dari admin.`;
 🔗 Link: ${imageUrl}
 
 *Untuk melihat bukti & verifikasi:*
-\`.lihat_bukti ${refID}\`
+\`.show ${refID}\`
 
 *Untuk approve:*
-\`.approve_bukti ${refID}\`
+\`.acc ${refID}\`
 
 *Untuk reject:*
-\`.reject_bukti ${refID} [alasan]\``;
+\`.reject ${refID} [alasan]\``;
 
     // Send to owner
     for (const own of global.owner) {
@@ -1062,6 +1062,7 @@ case 'lihat_bukti': {
   break;
 }
 
+case 'acc':
 case 'approve_bukti': {
   if (!isOwner) return m.reply('❌ Hanya owner yang bisa!');
   
@@ -1209,6 +1210,7 @@ case 'approve_bukti': {
   break;
 }
 
+case 'reject':
 case 'reject_bukti': {
   if (!isOwner) return m.reply('❌ Hanya owner yang bisa!');
   
