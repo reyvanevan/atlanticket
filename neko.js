@@ -877,8 +877,8 @@ User kirim gambar transfer, terus balas dengan:
       imageUrl = `./db/bukti_transfer/${fileName}`;
     }
 
-    // Generate reference ID
-    const refID = `BKT-${Date.now()}`;
+    // Generate reference ID (1 = Bukti Transfer)
+    const refID = `1${Date.now()}`;
 
     // Simpan ke temp storage untuk verifikasi admin
     if (!global.pendingPayments) {
@@ -916,7 +916,7 @@ User kirim gambar transfer, terus balas dengan:
     // Konfirmasi ke user
     const confirmText = `✅ *BUKTI TRANSFER DITERIMA*
 
-> Ref ID : ${refID}
+> Kode Bukti : ${refID}
 > Jumlah : Rp ${jumlah.toLocaleString('id-ID')}
 > Catatan : ${catatan}
 > Status : ⏳ Menunggu verifikasi admin
@@ -930,7 +930,7 @@ Silahkan tunggu konfirmasi dari admin.`;
     // Kirim notif ke admin
     const adminNotif = `📸 *BUKTI TRANSFER MASUK*
 
-> Ref ID : ${refID}
+> Kode Bukti : ${refID}
 > Dari : ${m.pushName} (${m.sender.split('@')[0]})
 > Jumlah : Rp ${jumlah.toLocaleString('id-ID')}
 > Catatan : ${catatan}
@@ -975,7 +975,7 @@ case 'lihat_bukti': {
         image: fs.readFileSync(data.localPath),
         caption: `📸 *BUKTI TRANSFER ${data.refID}*
 
-> Dari : ${data.userName} (${data.userJid.split('@')[0]})
+> Dari : ${data.userName} (${data.userPhone})
 > Jumlah : Rp ${data.jumlah.toLocaleString('id-ID')}
 > Catatan : ${data.catatan}
 > Waktu : ${data.createdAt.toLocaleString('id-ID')}
@@ -1002,9 +1002,9 @@ case 'approve_bukti': {
     const data = global.pendingPayments[refID];
     const userJid = data.userJid;
     
-    // Generate QR code tiket
+    // Generate QR code tiket (2 = Tiket)
     const moment = require('moment-timezone');
-    const ticketID = `TIK-${Date.now()}`;
+    const ticketID = `2${Date.now()}`;
     const qrData = `${ticketID}-${data.jumlah}-UMBandung Fest`;
     
     // Generate QR code
@@ -1027,7 +1027,7 @@ case 'approve_bukti': {
     // Kirim tiket ke user
     const ticketMsg = `✅ *PEMBAYARAN DISETUJUI - TIKET DIGENERATE*
 
-> Tiket ID : ${ticketID}
+> Kode Tiket : ${ticketID}
 > Konser : UMBandung Fest
 > Tanggal : 29/11/2025
 > Harga : Rp ${data.jumlah.toLocaleString('id-ID')}
@@ -1045,8 +1045,8 @@ case 'approve_bukti': {
     // Konfirmasi ke admin
     m.reply(`✅ *BUKTI TRANSFER DISETUJUI*
 
-> Ref ID : ${refID}
-> Tiket ID : ${ticketID}
+> Kode Bukti : ${refID}
+> Kode Tiket : ${ticketID}
 > Pengguna : ${data.userName}
 > Jumlah : Rp ${data.jumlah.toLocaleString('id-ID')}
 > Status : APPROVED
@@ -1110,7 +1110,7 @@ case 'reject_bukti': {
     // Notify user
     const rejectMsg = `❌ *BUKTI TRANSFER DITOLAK*
 
-> Ref ID : ${refID}
+> Kode Bukti : ${refID}
 > Alasan : ${alasan || 'Data tidak sesuai'}
 ┈ׅ──˄─꯭─꯭──────꯭ׄ──ׅ┈
 
@@ -1123,7 +1123,7 @@ wa.me/${global.nomerOwner}`;
     // Confirm to admin
     m.reply(`❌ *BUKTI TRANSFER DITOLAK*
 
-> Ref ID : ${refID}
+> Kode Bukti : ${refID}
 > Alasan : ${alasan}
 > Pengguna : ${data.userName}
 ┈ׅ──˄─꯭─꯭──────꯭ׄ──ׅ┈
