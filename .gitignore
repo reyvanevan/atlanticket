@@ -15,7 +15,9 @@ session/
 
 # Environment variables
 .env
-.env.* 
+.env.local
+.env.*.local
+!.env.example
 
 # Service Account Keys (Firebase/GCP)
 serviceaccountkey.json
