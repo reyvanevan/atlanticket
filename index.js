@@ -110,17 +110,33 @@ const client = makeWASocket({
   linkPreviewImageThumbnailWidth: 100 // WAJIB di versi 6.3.0 ke atas
 });
 
+// Request pairing code ONLY after connection is fully established
 if (usePairingCode && !client.authState.creds.registered) {
-  const phoneNumber = await question(color(`\n\nMasukan Nomor :\n`, 'white'));
-
-  const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-  console.log('Meminta Code...');
-  await delay(3500);
-
-  // Define your custom 8-digit code (alphanumeric) - sesuai dokumentasi README
-  const customPairingCode = "ATLNCODE";
-  const code = await client.requestPairingCode(phoneNumber.trim(), customPairingCode);
-  console.log(color(`⚠︎ Kode Pairing Bot Whatsapp kamu :`, "gold"), color(`${code?.match(/.{1,4}/g)?.join('-') || code}`, "white"));
+  const onConnectionUpdate = async (update) => {
+    const { connection } = update;
+    
+    // IMPORTANT: Wait until connection is 'open' before requesting pairing code
+    // This prevents Error 428 "Connection Closed"
+    if (connection === 'open' && !client.authState.creds.registered) {
+      // Remove this listener after handling
+      client.ev.off('connection.update', onConnectionUpdate);
+      
+      try {
+        const phoneNumber = await question(color(`\n\nMasukan Nomor :\n`, 'white'));
+        
+        console.log(color('Meminta Code...', 'yellow'));
+        
+        // Define your custom 8-digit code (alphanumeric) - sesuai dokumentasi README
+        const customPairingCode = "ATLNCODE";
+        const code = await client.requestPairingCode(phoneNumber.trim(), customPairingCode);
+        console.log(color(`⚠︎ Kode Pairing Bot Whatsapp kamu :`, "gold"), color(`${code?.match(/.{1,4}/g)?.join('-') || code}`, "white"));
+      } catch (err) {
+        console.error(color('Error requesting pairing code:', 'red'), err.message);
+      }
+    }
+  };
+  
+  client.ev.on('connection.update', onConnectionUpdate);
 } else if (client.authState.creds.registered) {
   console.log(color('✅ Using existing session', 'green'));
 }
@@ -350,53 +366,56 @@ client.serializeM = (m) => smsg(client, m,)
     
    // let cronInitialized = false;
 client.ev.on("connection.update", async (update) => {
-const { connection, lastDisconnect } = update;
+const { connection, lastDisconnect, qr } = update;
+
+// Show QR code jika ada
+if (qr) {
+  console.log(color('QR Code received! Scan dengan WhatsApp', 'cyan'));
+}
+
 if (connection === "close") {
   let reason = new Boom(lastDisconnect?.error)?.output.statusCode;
+  console.log(color(`[DISCONNECT] Reason Code: ${reason}`, 'red'));
+  
   if (reason === DisconnectReason.badSession) {
 console.log(`Bad Session File, Please Delete Session and Scan Again`);
 process.exit();
   } else if (reason === DisconnectReason.connectionClosed) {
 console.log("Connection closed, reconnecting....");
+await delay(2000);
 connectToWhatsApp();
   } else if (reason === DisconnectReason.connectionLost) {
 console.log("Connection Lost from Server, reconnecting...");
+await delay(2000);
 connectToWhatsApp();
   } else if (reason === DisconnectReason.connectionReplaced) {
 console.log("Connection Replaced, Another New Session Opened, Please Restart Bot");
 process.exit();
- // } else if (reason === DisconnectReason.loggedOut) {
-//console.log(`Device Logged Out, Please Delete Folder Session yusril and Scan Again.`);
-//process.exit();
-     } else if (reason === DisconnectReason.loggedOut) {
+  } else if (reason === DisconnectReason.loggedOut) {
   console.log('Device Logged Out. Deleting session and restarting...');
-  fs.rmSync('./session', { recursive: true, force: true }); // <- hapus sesi
+  fs.rmSync('./session', { recursive: true, force: true });
   await delay(3000);
-  connectToWhatsApp(); // restart ulang pairing 
-     
+  connectToWhatsApp();
   } else if (reason === DisconnectReason.restartRequired) {
 console.log("Restart Required, Restarting...");
+await delay(2000);
 connectToWhatsApp();
   } else if (reason === DisconnectReason.timedOut) {
 console.log("Connection TimedOut, Reconnecting...");
+await delay(2000);
 connectToWhatsApp();
   } else {
-console.log(`Unknown DisconnectReason: ${reason}|${connection}`);
+// Handle unknown disconnects (like 405)
+console.log(`[Unknown Disconnect] Reason: ${reason}, Connection: ${connection}`);
+await delay(2000);
 connectToWhatsApp();
   }
-} else if (connection === 'connecting') {console.log(color(`─[`,`magenta`),`「`,  color(`Powered by Atlantic Gate`,`red`), `」`,  color(`]─`,`magenta`))
-
-start(`1`,`Connecting...`)
+} else if (connection === 'connecting') {
+  console.log(color(`─[`,`magenta`),`「`,  color(`Powered by Atlantic Gate`,`red`), `」`,  color(`]─`,`magenta`))
+  start(`1`,`Connecting...`)
 } else if (connection === "open") {
   success(`1`,`[■■■■■■■■■■■■■■■] Connected`)
-  
-  // Berikan client ke scheduler untuk notifikasi
- // setClient(client);
-  
-  // Inisialisasi scheduled tasks
-  //setupScheduledTasks();
-  
-  //console.log("Scheduled tasks initialized successfully!");
+  console.log(color('✅ Bot is now online and ready!', 'green'));
 }
 
 });
