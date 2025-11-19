@@ -819,6 +819,301 @@ case 'batal': {
   }
   break;
 }
+
+case 'bukti':
+case 'bukti_transfer': {
+  // User upload bukti transfer dengan media
+  if (!m.quoted || !m.quoted.mtype || !m.quoted.mtype.includes('imageMessage')) {
+    return m.reply(`📤 *FORMAT KIRIM BUKTI TRANSFER*
+
+Caranya:
+1. Kirim screenshot bukti transfer
+2. Reply screenshot dengan: .bukti_transfer [jumlah] [catatan]
+
+*Contoh:*
+User kirim gambar transfer, terus balas dengan:
+\`.bukti_transfer 25000 UMBandung Fest - 1 tiket\`
+
+⚠️ *PENTING:*
+> Screenshot harus jelas
+> Berisi nama rekening, jumlah, dan waktu transfer
+> Admin akan verifikasi dalam 5 menit`);
+  }
+
+  if (!text) {
+    return m.reply('Format: .bukti_transfer [jumlah] [catatan]\nContoh: .bukti_transfer 25000 UMBandung Fest - 1 tiket');
+  }
+
+  try {
+    const parts = text.split(' ');
+    const jumlah = parseInt(parts[0]);
+    const catatan = parts.slice(1).join(' ');
+
+    if (isNaN(jumlah)) {
+      return m.reply('❌ Jumlah harus berupa angka!');
+    }
+
+    // Download image
+    const timestamp = Date.now();
+    const fileName = `bukti_${m.sender.split('@')[0]}_${timestamp}.jpg`;
+    const filePath = `./db/bukti_transfer/${fileName}`;
+
+    // Ensure directory exists
+    const dir = './db/bukti_transfer';
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+
+    // Download media
+    const mediaPath = await downloadAndSaveMediaMessage('image', filePath);
+
+    // Upload ke cloud if imagecloud available
+    let imageUrl = null;
+    try {
+      const { uploadImage } = require('./lib/imagecloud');
+      imageUrl = await uploadImage(mediaPath);
+    } catch (e) {
+      console.log('⚠️ Image cloud not available, using local file');
+      imageUrl = `./db/bukti_transfer/${fileName}`;
+    }
+
+    // Generate reference ID
+    const refID = `BKT-${Date.now()}`;
+
+    // Simpan ke temp storage untuk verifikasi admin
+    if (!global.pendingPayments) {
+      global.pendingPayments = {};
+    }
+
+    global.pendingPayments[refID] = {
+      refID: refID,
+      userJid: m.sender,
+      userName: m.pushName,
+      jumlah: jumlah,
+      catatan: catatan,
+      mediaPath: imageUrl,
+      localPath: filePath,
+      createdAt: new Date(),
+      status: 'pending'
+    };
+
+    // Konfirmasi ke user
+    const confirmText = `✅ *BUKTI TRANSFER DITERIMA*
+
+> Ref ID : ${refID}
+> Jumlah : Rp ${jumlah.toLocaleString('id-ID')}
+> Catatan : ${catatan}
+> Status : ⏳ Menunggu verifikasi admin
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+Admin akan verifikasi dalam 5 menit.
+Silahkan tunggu konfirmasi dari admin.`;
+
+    m.reply(confirmText);
+
+    // Kirim notif ke admin
+    const adminNotif = `📸 *BUKTI TRANSFER MASUK*
+
+> Ref ID : ${refID}
+> Dari : ${m.pushName} (${m.sender.split('@')[0]})
+> Jumlah : Rp ${jumlah.toLocaleString('id-ID')}
+> Catatan : ${catatan}
+> Waktu : ${new Date().toLocaleString('id-ID')}
+┈ׅ──��─꯭─꯭──────꯭ׄ──ׅ┈
+
+*Untuk melihat bukti & verifikasi:*
+\`.lihat_bukti ${refID}\`
+
+*Untuk approve:*
+\`.approve_bukti ${refID}\`
+
+*Untuk reject:*
+\`.reject_bukti ${refID} [alasan]\``;
+
+    // Send to owner
+    for (const own of global.owner) {
+      client.sendMessage(own + '@s.whatsapp.net', { text: adminNotif }, { quoted: m });
+    }
+
+  } catch (err) {
+    console.error('Error:', err);
+    m.reply(`❌ Error: ${err.message}`);
+  }
+  break;
+}
+
+case 'lihat_bukti': {
+  if (!isOwner) return m.reply('❌ Hanya owner yang bisa!');
+  
+  const refID = text;
+  if (!refID || !global.pendingPayments || !global.pendingPayments[refID]) {
+    return m.reply('❌ Ref ID tidak ditemukan!');
+  }
+
+  const data = global.pendingPayments[refID];
+  
+  try {
+    // Kirim image ke admin
+    if (data.localPath && fs.existsSync(data.localPath)) {
+      await client.sendMessage(m.chat, { 
+        image: fs.readFileSync(data.localPath),
+        caption: `📸 *BUKTI TRANSFER ${data.refID}*
+
+> Dari : ${data.userName} (${data.userJid.split('@')[0]})
+> Jumlah : Rp ${data.jumlah.toLocaleString('id-ID')}
+> Catatan : ${data.catatan}
+> Waktu : ${data.createdAt.toLocaleString('id-ID')}
+┈ׅ──ۄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+*Status: ${data.status.toUpperCase()}*`
+      }, { quoted: m });
+    }
+  } catch (err) {
+    m.reply(`❌ Error: ${err.message}`);
+  }
+  break;
+}
+
+case 'approve_bukti': {
+  if (!isOwner) return m.reply('❌ Hanya owner yang bisa!');
+  
+  const refID = text;
+  if (!refID || !global.pendingPayments || !global.pendingPayments[refID]) {
+    return m.reply('❌ Ref ID tidak ditemukan!');
+  }
+
+  try {
+    const data = global.pendingPayments[refID];
+    const userJid = data.userJid;
+    
+    // Generate QR code tiket
+    const moment = require('moment-timezone');
+    const ticketID = `TIK-${Date.now()}`;
+    const qrData = `${ticketID}-${data.jumlah}-UMBandung Fest`;
+    
+    // Generate QR code
+    const qrcode = require('qrcode');
+    const qrImagePath = `./db/qr_tickets/${ticketID}.png`;
+    
+    // Ensure directory exists
+    if (!fs.existsSync('./db/qr_tickets')) {
+      fs.mkdirSync('./db/qr_tickets', { recursive: true });
+    }
+
+    await qrcode.toFile(qrImagePath, qrData, {
+      errorCorrectionLevel: 'H',
+      type: 'image/png',
+      quality: 0.95,
+      margin: 2,
+      width: 300
+    });
+
+    // Kirim tiket ke user
+    const ticketMsg = `✅ *PEMBAYARAN DISETUJUI - TIKET DIGENERATE*
+
+> Tiket ID : ${ticketID}
+> Konser : UMBandung Fest
+> Tanggal : 29/11/2025
+> Harga : Rp ${data.jumlah.toLocaleString('id-ID')}
+> Status : ✅ VALID
+┈ׅ──˄─꯭─꯭──────꯭ׄ──ׅ┈
+
+🎫 *QR CODE TIKET (SIMPAN BAIK-BAIK)*`;
+
+    // Send QR code image
+    await client.sendMessage(userJid, { 
+      image: fs.readFileSync(qrImagePath),
+      caption: ticketMsg
+    });
+
+    // Konfirmasi ke admin
+    m.reply(`✅ *BUKTI TRANSFER DISETUJUI*
+
+> Ref ID : ${refID}
+> Tiket ID : ${ticketID}
+> Pengguna : ${data.userName}
+> Jumlah : Rp ${data.jumlah.toLocaleString('id-ID')}
+> Status : APPROVED
+┈ׅ──˄─꯭─꯭──────꯭ׄ──ׅ┈
+
+✅ Tiket sudah dikirim ke user`);
+
+    // Simpan ke Firestore
+    const firestore = admin.firestore();
+    await firestore.collection('tickets').doc(ticketID).set({
+      ticketID: ticketID,
+      refID: refID,
+      buyerJid: userJid,
+      buyerName: data.userName,
+      konser: 'UMBandung Fest',
+      harga: data.jumlah,
+      qrCode: qrImagePath,
+      status: 'aktif',
+      createdAt: new Date(),
+      approvedAt: new Date(),
+      approvedBy: m.sender,
+      catatan: data.catatan
+    });
+
+    // Update status
+    data.status = 'approved';
+    global.pendingPayments[refID] = data;
+
+  } catch (err) {
+    console.error('Error:', err);
+    m.reply(`❌ Error: ${err.message}`);
+  }
+  break;
+}
+
+case 'reject_bukti': {
+  if (!isOwner) return m.reply('❌ Hanya owner yang bisa!');
+  
+  const parts = text.split(' ');
+  const refID = parts[0];
+  const alasan = parts.slice(1).join(' ');
+
+  if (!refID || !global.pendingPayments || !global.pendingPayments[refID]) {
+    return m.reply('❌ Ref ID tidak ditemukan!\nFormat: .reject_bukti [ref_id] [alasan]');
+  }
+
+  try {
+    const data = global.pendingPayments[refID];
+    const userJid = data.userJid;
+
+    // Notify user
+    const rejectMsg = `❌ *BUKTI TRANSFER DITOLAK*
+
+> Ref ID : ${refID}
+> Alasan : ${alasan || 'Data tidak sesuai'}
+┈ׅ──˄─꯭─꯭──────꯭ׄ──ׅ┈
+
+Silahkan hubungi admin untuk info lebih lanjut.
+Admin: ${global.ownerName}
+wa.me/${global.nomerOwner}`;
+
+    await client.sendMessage(userJid, { text: rejectMsg });
+
+    // Confirm to admin
+    m.reply(`❌ *BUKTI TRANSFER DITOLAK*
+
+> Ref ID : ${refID}
+> Alasan : ${alasan}
+> Pengguna : ${data.userName}
+┈ׅ──˄─꯭─꯭──────꯭ׄ──ׅ┈
+
+✅ Notif penolakan sudah dikirim ke user`);
+
+    // Update status
+    data.status = 'rejected';
+    global.pendingPayments[refID] = data;
+
+  } catch (err) {
+    console.error('Error:', err);
+    m.reply(`❌ Error: ${err.message}`);
+  }
+  break;
+}
 			
 case 'bot': {
   let pesanBot;
