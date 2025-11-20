@@ -640,6 +640,7 @@ case 'menu': {
 }
 
 case 'order': {
+  if (isAdmin && !isOwner) return m.reply('❌ Admin tidak bisa order tiket! Hanya user biasa.');
   if (!text || isNaN(text)) {
     return m.reply('Format salah!\nGunakan: .order [nomor]\nContoh: .order 1');
   }
@@ -689,6 +690,7 @@ case 'order': {
 }
 
 case 'checkout': {
+  if (isAdmin && !isOwner) return m.reply('❌ Admin tidak bisa checkout! Hanya user biasa.');
   const checkoutText = `💳 *PROSES CHECKOUT TIKET*
 
 > Silahkan lakukan pembayaran ke:
@@ -863,6 +865,7 @@ case 'batal': {
 
 case 'bukti':
 case 'bukti_transfer': {
+  if (isAdmin && !isOwner) return m.reply('❌ Admin tidak bisa upload bukti! Hanya user biasa.');
   // User upload bukti transfer dengan media
   if (!m.quoted || !m.quoted.mtype || !m.quoted.mtype.includes('imageMessage')) {
     return m.reply(`📤 *FORMAT KIRIM BUKTI TRANSFER*
