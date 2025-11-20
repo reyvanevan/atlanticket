@@ -3,8 +3,8 @@ const fs = require('fs');
 const chalk = require('chalk');
 
 // BOT & OWNER INFO
-global.owner = (process.env.OWNER_NUMBERS || '6281224258870,6289653544913').split(',');
-global.nomerOwner = process.env.OWNER_PRIMARY || '6281224258870';
+global.owner = (process.env.OWNER_NUMBERS || '6281224258870,6285871756001').split(',').map(n => n.trim());
+global.nomerOwner = process.env.OWNER_PRIMARY || '6281224258870,6285871756001';
 global.nomerBot = process.env.BOT_NUMBER || '6285166328091';
 global.botName = process.env.BOT_NAME || 'Atlana';
 global.ownerName = process.env.OWNER_NAME || 'Reyvan';

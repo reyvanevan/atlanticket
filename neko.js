@@ -179,6 +179,22 @@ const command = cleanBody.replace(prefix, '').trim().split(/ +/).shift().toLower
     const from = mek.key.remoteJid
     const botNumber = await client.decodeJid(client.user.id)
     const isOwner = [botNumber, ...global.owner].map(v => v.replace(/[^0-9]/g, '') + '@s.whatsapp.net').includes(m.sender)
+    
+    // ========== ROLE SYSTEM FROM FIRESTORE ==========
+    let userRole = 'user'; // default role
+    try {
+      const firestore = admin.firestore();
+      const userDoc = await firestore.collection('users').doc(m.sender).get();
+      if (userDoc.exists) {
+        userRole = userDoc.data().role || 'user';
+      }
+    } catch (err) {
+      console.log('Warning: Firestore role check failed, using default');
+    }
+    
+    const isAdmin = userRole === 'admin' || isOwner; // Admin + Owner
+    const isDeveloper = isOwner; // Only Owner (Developer)
+    
     const sender = m.isGroup ? (m.key.participant ? m.key.participant : m.participant) : m.key.remoteJid
     
     // Helper function untuk extract nomor HP yang benar dari JID
@@ -433,7 +449,8 @@ const Input = Array.isArray(mentionByTag) && mentionByTag.length > 0 ? mentionBy
     
     // Log hanya private messages, ignore group messages
     if (m.message && !m.isGroup) {
-      console.log(chalk.red(chalk.bgBlack('[ PESAN ] => ')), chalk.white(chalk.bgBlack(budy || m.mtype)) + '\n' + chalk.magenta('=> Dari'), chalk.green(pushname), chalk.yellow(m.sender.split("@")[0]) + '\n' + chalk.blueBright('=> Di'), chalk.green('Private Chat'), chalk.magenta(`\nJam :`) + time1)
+      const userPhone = m.key?.senderPn || m.sender.split("@")[0];
+      console.log(chalk.red(chalk.bgBlack('[ PESAN ] => ')), chalk.white(chalk.bgBlack(budy || m.mtype)) + '\n' + chalk.magenta('=> Dari'), chalk.green(pushname), chalk.yellow(userPhone) + '\n' + chalk.blueBright('=> Di'), chalk.green('Private Chat'), chalk.magenta(`\nJam :`) + time1)
     }
 
     // Ignore group messages untuk command processing
@@ -1048,7 +1065,7 @@ Silahkan tunggu konfirmasi dari admin.`;
 
 case 'show':
 case 'lihat_bukti': {
-  if (!isOwner) return m.reply('❌ Hanya owner yang bisa!');
+  if (!isAdmin) return m.reply('❌ Hanya admin/owner yang bisa!');
   
   const refID = text;
   if (!refID || !global.pendingPayments || !global.pendingPayments[refID]) {
@@ -1084,7 +1101,7 @@ case 'lihat_bukti': {
 
 case 'acc':
 case 'approve_bukti': {
-  if (!isOwner) return m.reply('❌ Hanya owner yang bisa!');
+  if (!isAdmin) return m.reply('❌ Hanya admin/owner yang bisa!');
   
   const refID = text;
   if (!refID || !global.pendingPayments || !global.pendingPayments[refID]) {
@@ -1232,7 +1249,7 @@ case 'approve_bukti': {
 
 case 'reject':
 case 'reject_bukti': {
-  if (!isOwner) return m.reply('❌ Hanya owner yang bisa!');
+  if (!isAdmin) return m.reply('❌ Hanya admin/owner yang bisa!');
   
   const parts = text.split(' ');
   const refID = parts[0];
@@ -1329,7 +1346,92 @@ case 'setbot': {
   m.reply(`✅ Pesan bot grup berhasil diupdate:\n\n"${text}"`);
   break;
 }
-            
+
+// ========== ROLE MANAGEMENT COMMANDS ==========
+case 'addrole': {
+  if (!isDeveloper) return m.reply('❌ Hanya Developer (Owner) yang bisa!');
+  
+  if (!text) return m.reply('Format: .addrole [nomor] [role]\nRole: admin atau user\nContoh: .addrole 6285871756001 admin');
+  
+  const parts = text.split(' ');
+  const targetPhone = parts[0];
+  const role = parts[1]?.toLowerCase();
+  
+  if (!role || !['admin', 'user'].includes(role)) {
+    return m.reply('❌ Role harus "admin" atau "user"!');
+  }
+  
+  try {
+    const firestore = admin.firestore();
+    const targetJid = targetPhone.replace(/[^0-9]/g, '') + '@s.whatsapp.net';
+    
+    await firestore.collection('users').doc(targetJid).set({
+      phone: targetPhone.replace(/[^0-9]/g, ''),
+      role: role,
+      updatedAt: new Date(),
+      updatedBy: m.sender
+    }, { merge: true });
+    
+    m.reply(`✅ Role berhasil diupdate!\n\n> Nomor : ${targetPhone}\n> Role : ${role.toUpperCase()}`);
+  } catch (err) {
+    m.reply(`❌ Error: ${err.message}`);
+  }
+  break;
+}
+
+case 'removerole': {
+  if (!isDeveloper) return m.reply('❌ Hanya Developer (Owner) yang bisa!');
+  
+  if (!text) return m.reply('Format: .removerole [nomor]\nContoh: .removerole 6285871756001');
+  
+  const targetPhone = text.trim();
+  
+  try {
+    const firestore = admin.firestore();
+    const targetJid = targetPhone.replace(/[^0-9]/g, '') + '@s.whatsapp.net';
+    
+    await firestore.collection('users').doc(targetJid).update({
+      role: 'user',
+      updatedAt: new Date(),
+      updatedBy: m.sender
+    });
+    
+    m.reply(`✅ Role berhasil direset ke user!\n\n> Nomor : ${targetPhone}`);
+  } catch (err) {
+    m.reply(`❌ Error: ${err.message}`);
+  }
+  break;
+}
+
+case 'getrole': {
+  if (!isDeveloper) return m.reply('❌ Hanya Developer (Owner) yang bisa!');
+  
+  if (!text) return m.reply('Format: .getrole [nomor]\nContoh: .getrole 6285871756001');
+  
+  const targetPhone = text.trim();
+  
+  try {
+    const firestore = admin.firestore();
+    const targetJid = targetPhone.replace(/[^0-9]/g, '') + '@s.whatsapp.net';
+    
+    const userDoc = await firestore.collection('users').doc(targetJid).get();
+    
+    if (!userDoc.exists) {
+      return m.reply(`❌ User tidak ditemukan: ${targetPhone}`);
+    }
+    
+    const data = userDoc.data();
+    m.reply(`📋 *INFO USER*
+
+> Nomor : ${data.phone || targetPhone}
+> Role : ${(data.role || 'user').toUpperCase()}
+> Updated : ${data.updatedAt ? new Date(data.updatedAt.toDate()).toLocaleString('id-ID') : 'N/A'}
+> Updated By : ${data.updatedBy || 'N/A'}`);
+  } catch (err) {
+    m.reply(`❌ Error: ${err.message}`);
+  }
+  break;
+}
             
    case 'min':
    case 'admin':
@@ -1366,7 +1468,7 @@ case 'setbot': {
       return '❓';
     };
     
-    if (isOwner) {
+    if (isAdmin) {
       // ADMIN MODE - Lihat riwayat bukti transfer atau user tertentu
       const filter = text.toLowerCase();
       
@@ -1401,6 +1503,7 @@ case 'setbot': {
         allData.forEach(data => {
           const icon = getStatusIcon(data.status);
           const approvedByPhone = data.approvedBy ? data.approvedBy.split('@')[0] : '';
+          const rejectedByPhone = data.rejectedBy ? data.rejectedBy.split('@')[0] : '';
           riwayatText += `\n${no}. ${icon} *${data.refID}*
 > User : ${data.userName} (${data.userPhone})
 > Harga : Rp ${data.jumlah.toLocaleString('id-ID')}
@@ -1408,7 +1511,7 @@ case 'setbot': {
           if (data.status === 'approved' && data.approvedAt) {
             riwayatText += `\n> Approved : ${new Date(data.approvedAt.toDate()).toLocaleString('id-ID')} (${approvedByPhone})`;
           } else if (data.status === 'rejected' && data.rejectedAt) {
-            riwayatText += `\n> Rejected : ${new Date(data.rejectedAt.toDate()).toLocaleString('id-ID')} (${approvedByPhone})`;
+            riwayatText += `\n> Rejected : ${new Date(data.rejectedAt.toDate()).toLocaleString('id-ID')} (${rejectedByPhone})`;
           }
           riwayatText += `\n┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈`;
           no++;
