@@ -218,25 +218,12 @@ const command = cleanBody.replace(prefix, '').trim().split(/ +/).shift().toLower
         phoneNumber = m.sender.split('@')[0];
       }
       
-      console.log(color(`[ROLE_CHECK_DEBUG] m.sender: ${m.sender}`, 'yellow'));
-      console.log(color(`[ROLE_CHECK_DEBUG] m.key.senderPn: ${m.key?.senderPn}`, 'yellow'));
-      console.log(color(`[ROLE_CHECK_DEBUG] extracted phoneNumber: ${phoneNumber}`, 'yellow'));
-      
       // Build JID untuk lookup di Firestore
       const lookupJid = phoneNumber + '@s.whatsapp.net';
-      console.log(color(`[ROLE_CHECK_DEBUG] lookupJid: ${lookupJid}`, 'yellow'));
       
       const userDoc = await firestore.collection('users').doc(lookupJid).get();
       if (userDoc.exists) {
         userRole = userDoc.data().role || 'user';
-        console.log(color(`[ROLE_CHECK_SUCCESS] Found role: ${userRole}`, 'green'));
-      } else {
-        console.log(color(`[ROLE_CHECK_NOTFOUND] No document for: ${lookupJid}`, 'red'));
-      }
-      
-      // Debug logging
-      if (userRole !== 'user') {
-        console.log(color(`[ROLE_CHECK] ${lookupJid} => Role: ${userRole}`, 'green'));
       }
     } catch (err) {
       console.log(color(`[ROLE_CHECK_ERROR] ${err.message}`, 'red'));
