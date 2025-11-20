@@ -673,7 +673,7 @@ case 'menu': {
       index++;
     });
 
-    menuText += `\n> Balas dengan: .order [nomor]
+    menuText += `\n> Balas dengan: .order
 > Untuk melihat detail & memesan tiket`;
 
     m.reply(menuText);
@@ -807,6 +807,26 @@ case 'order': {
     // Jika hanya 1 konser, langsung tampilkan detail
     if (konserArray.length === 1) {
       const konser = konserArray[0];
+      
+      // Fetch admin contact dari Firestore
+      let adminInfo = '';
+      try {
+        const adminsSnapshot = await firestore.collection('users').where('role', '==', 'admin').get();
+        if (!adminsSnapshot.empty) {
+          adminInfo = '\n\n👨‍💼 *HUBUNGI ADMIN:*';
+          let adminCount = 1;
+          adminsSnapshot.forEach(doc => {
+            const adminData = doc.data();
+            const adminPhone = adminData.phone || doc.id.split('@')[0];
+            const adminName = adminData.name || 'Admin ' + adminCount;
+            adminInfo += `\n${adminCount}. ${adminName}\n   > wa.me/${adminPhone}`;
+            adminCount++;
+          });
+        }
+      } catch (err) {
+        console.log('Warning: Gagal fetch admin:', err.message);
+      }
+      
       const orderText = `📋 *DETAIL TIKET KONSER*
 
 🎤 *${konser.nama}*
@@ -818,10 +838,7 @@ case 'order': {
 > Stok : ${konser.stokTersisa} tiket
 > Info : ${konser.deskripsi}
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
-
-> Untuk membeli, hubungi admin:
-> ${global.ownerName}
-> wa.me/${global.nomerOwner}
+${adminInfo}
 
 > atau balas .payment untuk lanjut`;
       return m.reply(orderText);
@@ -876,7 +893,7 @@ case 'pembayaran': {
           const adminData = doc.data();
           const adminPhone = adminData.phone || doc.id.split('@')[0];
           const adminName = adminData.name || 'Admin ' + adminCount;
-          adminInfo += `\n${adminCount}. ${adminName}\n   > WhatsApp: wa.me/${adminPhone}\n   > Nomor: ${adminPhone}`;
+          adminInfo += `\n${adminCount}. ${adminName}\n> Nomor: ${adminPhone}`;
           adminCount++;
         });
         adminInfo += '\n┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈';
@@ -897,12 +914,9 @@ Silahkan lakukan pembayaran ke rekening di bawah ini:
 > Nominal : Sesuai harga tiket yang dipilih
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-📱 *QRIS/E-WALLET*
-> Link : ${global.linkQRIS || 'Hubungi admin untuk QRIS'}
-┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
-
 ⏱️ *VERIFIKASI PEMBAYARAN*
-> Waktu verifikasi : Maksimal 5 menit
+> Waktu verifikasi : 5-10 menit maks 24 jam
+> Jika sudah ter-verifikasi : Tiket akan dikirim otomatis
 > Jika belum ter-verifikasi : Hubungi admin
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
