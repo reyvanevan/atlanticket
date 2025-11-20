@@ -206,20 +206,34 @@ const command = cleanBody.replace(prefix, '').trim().split(/ +/).shift().toLower
     try {
       const firestore = admin.firestore();
       
-      // Get the correct sender JID for private chats
-      // For private chats, m.key.remoteJid is the sender, NOT m.sender (which is bot)
-      const correctSender = m.isGroup ? (m.key.participant ? m.key.participant : m.participant) : m.key.remoteJid;
+      // Extract the actual user's phone number using senderPn (most reliable)
+      // m.key.senderPn contains the actual sender's phone number
+      let userPhone = m.key?.senderPn;
       
-      // Normalize JID format for lookup
-      let lookupJid = correctSender;
-      if (!lookupJid.includes('@s.whatsapp.net')) {
-        const phoneOnly = lookupJid.replace(/[^0-9]/g, '');
-        lookupJid = phoneOnly + '@s.whatsapp.net';
+      // Fallback: try to extract from other sources
+      if (!userPhone) {
+        // For private chats, try m.key.remoteJid
+        const remoteJid = m.key?.remoteJid;
+        if (remoteJid && remoteJid.includes('@')) {
+          const parts = remoteJid.split('@')[0];
+          // Only use if it looks like a phone number (all digits)
+          if (/^\d+$/.test(parts)) {
+            userPhone = parts;
+          }
+        }
       }
       
-      console.log(color(`[ROLE_CHECK_DEBUG] m.sender: ${m.sender}`, 'yellow'));
-      console.log(color(`[ROLE_CHECK_DEBUG] m.key.remoteJid: ${m.key.remoteJid}`, 'yellow'));
-      console.log(color(`[ROLE_CHECK_DEBUG] correctSender: ${correctSender}`, 'yellow'));
+      // Last resort fallback
+      if (!userPhone && m.sender) {
+        userPhone = m.sender.split('@')[0];
+      }
+      
+      console.log(color(`[ROLE_CHECK_DEBUG] m.key.senderPn: ${m.key?.senderPn}`, 'yellow'));
+      console.log(color(`[ROLE_CHECK_DEBUG] m.key.remoteJid: ${m.key?.remoteJid}`, 'yellow'));
+      console.log(color(`[ROLE_CHECK_DEBUG] extracted userPhone: ${userPhone}`, 'yellow'));
+      
+      // Build the JID to look up
+      let lookupJid = userPhone + '@s.whatsapp.net';
       console.log(color(`[ROLE_CHECK_DEBUG] lookupJid: ${lookupJid}`, 'yellow'));
       
       const userDoc = await firestore.collection('users').doc(lookupJid).get();
