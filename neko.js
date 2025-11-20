@@ -839,7 +839,7 @@ case 'order': {
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
 📸 *UNTUK ORDER:*
-> Balas .payment untuk lanjut${adminInfo}`;
+> Balas .payment untuk lanjut ke pembayaran`;
       return m.reply(orderText);
     }
 
@@ -921,7 +921,7 @@ Silahkan lakukan pembayaran ke rekening di bawah ini:
 
 📸 *LANGKAH SELANJUTNYA:*
 1. Lakukan transfer sesuai nominal
-2. Kirim screenshot bukti transfer dengan: .bukti_transfer [jumlah] [catatan]
+2. Kirim screenshot bukti transfer dengan: .bukti_transfer [nominal] [catatan]
 3. Tunggu verifikasi admin (maksimal 5 menit)
 4. Tiket akan otomatis dikirim setelah diverifikasi
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈${adminInfo}
@@ -1950,82 +1950,76 @@ case 'rmadmin': {
       
     } else {
       // USER MODE - Lihat riwayat bukti transfer dan tiket mereka
-      const filter = text.toLowerCase();
       
-      // Show tickets
-      if (!filter || filter === 'tiket') {
-        const ticketsSnapshot = await firestore.collection('tickets')
-            .where('buyerJid', '==', m.sender)
-            .get();
-          
-          if (ticketsSnapshot.empty) {
-            return m.reply('❌ Anda belum memiliki tiket apapun');
-          }
-          
-          // Sort by newest first - in memory
-          let allTickets = [];
-          ticketsSnapshot.forEach(doc => allTickets.push(doc.data()));
-          allTickets.sort((a, b) => b.createdAt.toDate() - a.createdAt.toDate());
-          
-          let riwayatText = `🎫 *TIKET SAYA*
-
-> Total : ${allTickets.length} tiket
-┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈\n`;
-          
-          let no = 1;
-          let totalSpent = 0;
-          allTickets.forEach(data => {
-            totalSpent += data.harga;
-            const icon = getStatusIcon(data.status === 'aktif' ? 'approved' : 'rejected');
-            riwayatText += `\n${no}. ${icon} *${data.ticketID}*
+      // Always fetch both tickets and bukti_transfer for user
+      const ticketsSnapshot = await firestore.collection('tickets')
+        .where('buyerJid', '==', m.sender)
+        .get();
+      
+      const buktiSnapshot = await firestore.collection('bukti_transfer')
+        .where('userJid', '==', m.sender)
+        .get();
+      
+      // Check if user has any history
+      if (ticketsSnapshot.empty && buktiSnapshot.empty) {
+        return m.reply('❌ Anda belum memiliki riwayat transaksi apapun');
+      }
+      
+      let riwayatText = `📋 *RIWAYAT TRANSAKSI SAYA*\n`;
+      
+      // Show tickets if any
+      if (!ticketsSnapshot.empty) {
+        let allTickets = [];
+        ticketsSnapshot.forEach(doc => allTickets.push(doc.data()));
+        allTickets.sort((a, b) => b.createdAt.toDate() - a.createdAt.toDate());
+        
+        riwayatText += `\n🎫 *TIKET SAYA* (${allTickets.length})\n┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈\n`;
+        
+        let totalTicketSpent = 0;
+        allTickets.forEach((data, idx) => {
+          totalTicketSpent += data.harga;
+          const icon = getStatusIcon(data.status === 'aktif' ? 'approved' : 'rejected');
+          riwayatText += `\n${idx + 1}. ${icon} *${data.ticketID}*
 > Konser : ${data.konser}
 > Harga : Rp ${data.harga.toLocaleString('id-ID')}
-> Status : ${data.status === 'aktif' ? 'Aktif' : 'Expired'}
-> Approved : ${new Date(data.approvedAt.toDate()).toLocaleString('id-ID')}
-┈ׅ──ۄ─꯭─꯭──────꯭ׄ──ׅ┈`;
-            no++;
-          });
-          
-          riwayatText += `\n💰 *TOTAL SPENDING* : Rp ${totalSpent.toLocaleString('id-ID')}`;
-          
-          return m.reply(riwayatText);
+> Status : ${data.status === 'aktif' ? '✅ Aktif' : '❌ Expired'}
+> Dibeli : ${new Date(data.approvedAt.toDate()).toLocaleString('id-ID')}`;
+        });
+        riwayatText += `\n┈ׅ──ۄ─꯭─꯭──────꯭ׄ──ׅ┈`;
       }
       
-      // Show pending payments
-      if (filter === 'pending') {
-        const buktiSnapshot = await firestore.collection('bukti_transfer')
-          .where('userJid', '==', m.sender)
-          .where('status', '==', 'pending')
-          .get();
-        
-        if (buktiSnapshot.empty) {
-          return m.reply('❌ Anda tidak ada bukti transfer yang pending');
-        }
-        
+      // Show bukti_transfer if any
+      if (!buktiSnapshot.empty) {
         let allData = [];
         buktiSnapshot.forEach(doc => allData.push(doc.data()));
-        allData.sort((a, b) => b.createdAt.toDate() - a.createdAt.toDate());
         
-        let riwayatText = `💳 *BUKTI TRANSFER MENUNGGU*
-
-> Total : ${allData.length} pending
-┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈\n`;
-        
-        let no = 1;
-        allData.forEach(data => {
-          const icon = getStatusIcon(data.status);
-          riwayatText += `\n${no}. ${icon} *${data.refID}*
-> Jumlah : Rp ${data.jumlah.toLocaleString('id-ID')}
-> Waktu : ${new Date(data.createdAt.toDate()).toLocaleString('id-ID')}
-> Catatan : ${data.catatan || 'Tidak ada'}
-┈ׅ──ۄ─꯭─꯭──────꯭ׄ──ׅ┈`;
-          no++;
+        // Sort by status (pending first, then approved, then rejected)
+        allData.sort((a, b) => {
+          const statusPriority = { 'pending': 0, 'approved': 1, 'rejected': 2 };
+          if (statusPriority[a.status] !== statusPriority[b.status]) {
+            return statusPriority[a.status] - statusPriority[b.status];
+          }
+          return b.createdAt.toDate() - a.createdAt.toDate();
         });
         
-        return m.reply(riwayatText);
+        riwayatText += `\n\n💳 *BUKTI TRANSFER* (${allData.length})\n┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈\n`;
+        
+        let totalBuktiSpent = 0;
+        allData.forEach((data, idx) => {
+          totalBuktiSpent += data.jumlah;
+          const icon = getStatusIcon(data.status);
+          riwayatText += `\n${idx + 1}. ${icon} *${data.refID}*
+> Jumlah : Rp ${data.jumlah.toLocaleString('id-ID')}
+> Status : ${data.status === 'pending' ? '⏳ Menunggu' : data.status === 'approved' ? '✅ Disetujui' : '❌ Ditolak'}
+> Waktu : ${new Date(data.createdAt.toDate()).toLocaleString('id-ID')}`;
+          if (data.catatan) {
+            riwayatText += `\n> Catatan : ${data.catatan}`;
+          }
+        });
+        riwayatText += `\n┈ׅ──ۄ─꯭─꯭──────꯭ׄ──ׅ┈`;
       }
       
-      return m.reply(`❌ Format tidak valid!\n*Gunakan:*\n.riwayat - Lihat tiket\n.riwayat pending - Lihat bukti pending`);
+      m.reply(riwayatText);
     }
   } catch (err) {
     console.error('Error:', err);
