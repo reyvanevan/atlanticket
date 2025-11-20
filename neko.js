@@ -212,9 +212,15 @@ const command = cleanBody.replace(prefix, '').trim().split(/ +/).shift().toLower
         lookupJid = phoneOnly + '@s.whatsapp.net';
       }
       
+      console.log(color(`[ROLE_CHECK_DEBUG] m.sender: ${m.sender}`, 'yellow'));
+      console.log(color(`[ROLE_CHECK_DEBUG] lookupJid: ${lookupJid}`, 'yellow'));
+      
       const userDoc = await firestore.collection('users').doc(lookupJid).get();
       if (userDoc.exists) {
         userRole = userDoc.data().role || 'user';
+        console.log(color(`[ROLE_CHECK_SUCCESS] Found role: ${userRole}`, 'green'));
+      } else {
+        console.log(color(`[ROLE_CHECK_NOTFOUND] No document for: ${lookupJid}`, 'red'));
       }
       
       // Debug logging
@@ -222,7 +228,7 @@ const command = cleanBody.replace(prefix, '').trim().split(/ +/).shift().toLower
         console.log(color(`[ROLE_CHECK] ${lookupJid} => Role: ${userRole}`, 'green'));
       }
     } catch (err) {
-      console.log('Warning: Firestore role check failed, using default');
+      console.log(color(`[ROLE_CHECK_ERROR] ${err.message}`, 'red'));
     }
     
     const isAdmin = userRole === 'admin' || isOwner; // Admin + Owner
