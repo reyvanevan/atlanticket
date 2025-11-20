@@ -773,7 +773,7 @@ case 'help': {
 1. *PEMBELIAN TIKET*
 > \`.menu\`
 > \`.order\` [nomor]
-> \`.checkout\`
+> \`.checkout\` / \`.payment\` / \`.pay\` / \`.bayar\` / \`.pembayaran\`
 > \`.bukti_transfer\` [jumlah] [catatan]
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
@@ -851,32 +851,73 @@ case 'order': {
   break;
 }
 
-case 'checkout': {
+case 'checkout':
+case 'payment':
+case 'pay':
+case 'bayar':
+case 'pembayaran': {
   if (isAdmin && !isOwner) return m.reply('❌ Admin tidak bisa checkout! Hanya user biasa.');
-  const checkoutText = `💳 *PROSES CHECKOUT TIKET*
+  
+  try {
+    const firestore = admin.firestore();
+    
+    // Fetch admin contact from Firestore
+    let adminInfo = '';
+    try {
+      const adminsSnapshot = await firestore.collection('users').where('role', '==', 'admin').get();
+      if (!adminsSnapshot.empty) {
+        adminInfo = '\n👨‍💼 *HUBUNGI ADMIN UNTUK BANTUAN LAIN:*';
+        let adminCount = 1;
+        adminsSnapshot.forEach(doc => {
+          const adminData = doc.data();
+          const adminPhone = adminData.phone || doc.id.split('@')[0];
+          const adminName = adminData.name || 'Admin ' + adminCount;
+          adminInfo += `\n${adminCount}. ${adminName}\n   > WhatsApp: wa.me/${adminPhone}\n   > Nomor: ${adminPhone}`;
+          adminCount++;
+        });
+        adminInfo += '\n┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈';
+      }
+    } catch (err) {
+      console.log('Warning: Gagal fetch admin dari Firestore:', err.message);
+    }
+    
+    const paymentText = `💳 *INFORMASI PEMBAYARAN TIKET*
 
-> Silahkan lakukan pembayaran ke:
+Silahkan lakukan pembayaran ke rekening di bawah ini:
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-💳 *Transfer: ATM/E-Banking*
-> Bank : ${global.bankName || 'Hubungi Admin'}
-> Rekening : ${global.nomerOwner}
-> Atas Nama : ${global.ownerName}
+🏦 *TRANSFER BANK (ATM/E-Banking/Mobile Banking)*
+> Bank : BJB (Bank Jabar Banten)
+> Rekening : 01053079196100
+> Atas Nama : Abdullah Gimnastiar
+> Nominal : Sesuai harga tiket yang dipilih
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-📲 *QRIS*
-> Link : ${global.linkQRIS || 'hubungi admin'}
+📱 *QRIS/E-WALLET*
+> Link : ${global.linkQRIS || 'Hubungi admin untuk QRIS'}
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-⚠️ *VERIFIKASI PEMBAYARAN*
-> Waktu : Dalam 5 menit otomatis
-> Jika belum : Hubungi admin
+⏱️ *VERIFIKASI PEMBAYARAN*
+> Waktu verifikasi : Maksimal 5 menit
+> Jika belum ter-verifikasi : Hubungi admin
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-👨‍💼 *HUBUNGI ADMIN*
-> Admin : ${global.ownerName}
-> Group : ${global.linkGC}`;
-  m.reply(checkoutText);
+📸 *LANGKAH SELANJUTNYA:*
+1. Lakukan transfer sesuai nominal
+2. Kirim screenshot bukti transfer dengan: .bukti_transfer [jumlah] [catatan]
+3. Tunggu verifikasi admin (maksimal 5 menit)
+4. Tiket akan otomatis dikirim setelah diverifikasi
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈${adminInfo}
+
+💡 *TIPS:*
+> Pastikan nominal yang ditransfer sesuai dengan harga tiket
+> Screenshot harus jelas menunjukkan nomor rekening, nominal, dan waktu transfer
+> Jangan lupa sertakan informasi tiket apa yang dibeli di catatan`;
+
+    m.reply(paymentText);
+  } catch (err) {
+    m.reply(`❌ Error: ${err.message}`);
+  }
   break;
 }
 
