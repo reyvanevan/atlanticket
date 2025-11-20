@@ -1169,61 +1169,10 @@ Kirim gambar + tuliskan:
     // Download media to temp
     await downloadAndSaveMediaMessage('image', tmpFilePath);
 
-    // Upload ke ImgBB (lebih reliable dari PixHost)
-    let imageUrl = null;
-    let localImageBuffer = null; // Simpan buffer untuk kirim ke admin
+    // Read image buffer untuk kirim ke admin (NO EXTERNAL HOSTING!)
+    const localImageBuffer = fs.readFileSync(tmpFilePath);
     
-    try {
-      const FormData = require('form-data');
-      const form = new FormData();
-      
-      // Read image dan simpan buffer
-      localImageBuffer = fs.readFileSync(tmpFilePath);
-      const base64Image = localImageBuffer.toString('base64');
-      
-      // ImgBB API requires 'image' parameter with base64 data
-      form.append('image', base64Image);
-      
-      const imgbbApiKey = global.imgbbApiKey || process.env.IMGBB_API_KEY;
-      
-      if (!imgbbApiKey || imgbbApiKey === 'YOUR_IMGBB_API_KEY_HERE' || imgbbApiKey === '') {
-        throw new Error('ImgBB API key not configured in .env file');
-      }
-      
-      console.log('📤 Uploading to ImgBB...');
-      const axiosRes = await axios.post(`https://api.imgbb.com/1/upload?key=${imgbbApiKey}`, form, {
-        headers: {
-          ...form.getHeaders()
-        },
-        timeout: 30000,
-        maxContentLength: Infinity,
-        maxBodyLength: Infinity
-      });
-
-      console.log('📥 ImgBB Response:', JSON.stringify(axiosRes.data, null, 2));
-
-      if (axiosRes.data && axiosRes.data.success && axiosRes.data.data) {
-        imageUrl = axiosRes.data.data.display_url || axiosRes.data.data.url;
-        console.log('✅ ImgBB upload success:', imageUrl);
-      } else {
-        console.log('⚠️ ImgBB response tidak sesuai:', axiosRes.data);
-      }
-    } catch (e) {
-      console.log('⚠️ ImgBB upload gagal:', e.message);
-      if (e.response) {
-        console.log('Response status:', e.response.status);
-        console.log('Response data:', JSON.stringify(e.response.data, null, 2));
-      }
-      imageUrl = null;
-    }
-
-    if (!imageUrl) {
-      // Hapus temp file jika gagal
-      try {
-        fs.unlinkSync(tmpFilePath);
-      } catch (e) {}
-      return m.reply('❌ Gagal upload gambar ke server. Pastikan API key ImgBB valid.');
-    }
+    console.log('✅ Bukti transfer loaded from temp, ready to send');
 
     // Generate reference ID (13 digit: 1 prefix + 12 digit timestamp)
     const refTimestamp = Math.floor(Date.now() / 1000).toString().slice(-12);
@@ -1265,7 +1214,7 @@ Kirim gambar + tuliskan:
       userPhone: phoneNumber,
       jumlah: jumlah,
       catatan: catatan,
-      mediaPath: imageUrl,
+      mediaPath: null, // No URL, image tersimpan di WhatsApp chat admin
       createdAt: new Date(),
       status: 'pending'
     };
@@ -1279,7 +1228,7 @@ Kirim gambar + tuliskan:
       userPhone: phoneNumber,
       jumlah: jumlah,
       catatan: catatan,
-      mediaPath: imageUrl,
+      mediaPath: null, // No URL needed - admin sudah terima document
       createdAt: new Date(),
       status: 'pending',
       approvedAt: null,
@@ -1301,7 +1250,7 @@ Silahkan tunggu konfirmasi dari kami.
 
     m.reply(confirmText);
 
-    // Kirim notif ke admin (gunakan userName dan phoneNumber yang sudah ter-extract dengan benar)
+    // Kirim notif ke admin
     const adminNotif = `📸 *BUKTI TRANSFER MASUK*
 
 > Kode Bukti : ${refID}
@@ -1311,10 +1260,7 @@ Silahkan tunggu konfirmasi dari kami.
 > Waktu : ${new Date().toLocaleString('id-ID')}
 ┈ׅ──ۄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-🔗 Link: ${imageUrl}
-
-*Untuk melihat bukti & verifikasi:*
-\`.show ${refID}\`
+📎 *Bukti transfer terlampir di atas*
 
 *Untuk approve:*
 \`.acc ${refID}\`
@@ -1322,44 +1268,62 @@ Silahkan tunggu konfirmasi dari kami.
 *Untuk reject:*
 \`.reject ${refID} alasan\``;
 
-    // Send to owner dengan bukti transfer (pakai buffer lokal, no download!)
-    for (const own of global.owner) {
+    // Kirim ke owner lokal dan admin Firestore secara parallel
+    const notifiedPhones = new Set();
+    const sendPromises = [];
+    
+    // Fungsi helper untuk kirim notifikasi
+    const sendNotification = async (jid, phone, label) => {
       try {
         if (localImageBuffer) {
-          try {
-            // Kirim sebagai document/file langsung dari buffer lokal
-            await client.sendMessage(own + '@s.whatsapp.net', {
-              document: localImageBuffer,
-              fileName: `BuktiTransfer_${refID}.jpg`,
-              mimetype: 'image/jpeg',
-              caption: adminNotif
-            }, { quoted: m });
-            console.log(`✅ Bukti transfer sent as document to admin ${own}`);
-          } catch (sendErr) {
-            console.log('⚠️ Gagal send as document, fallback ke image:', sendErr.message);
-            // Fallback: kirim sebagai image biasa
-            await client.sendMessage(own + '@s.whatsapp.net', { 
-              image: localImageBuffer,
-              caption: adminNotif
-            }, { quoted: m });
-          }
+          // Langsung kirim sebagai image (lebih cepat & reliable daripada document)
+          await client.sendMessage(jid, { 
+            image: localImageBuffer,
+            caption: adminNotif
+          }, { quoted: m });
+          console.log(`✅ Bukti transfer sent to ${label} ${phone}`);
         } else {
-          // Fallback jika buffer tidak ada (seharusnya tidak terjadi)
-          console.log('⚠️ Buffer tidak ada, kirim link saja');
-          await client.sendMessage(own + '@s.whatsapp.net', { 
-            text: `${adminNotif}\n\n🔗 Link: ${imageUrl}` 
-          }, { quoted: m });
+          await client.sendMessage(jid, { text: adminNotif }, { quoted: m });
         }
+        notifiedPhones.add(phone);
       } catch (err) {
-        console.error('Error sending notification to owner:', err.message);
-        // Last resort fallback
-        try {
-          await client.sendMessage(own + '@s.whatsapp.net', { 
-            text: `${adminNotif}\n\n🔗 Link: ${imageUrl}` 
-          }, { quoted: m });
-        } catch (e) {}
+        console.error(`❌ Error sending to ${label} ${phone}:`, err.message);
       }
+    };
+    
+    // Kirim ke owner lokal
+    for (const own of global.owner) {
+      const ownJid = own + '@s.whatsapp.net';
+      sendPromises.push(sendNotification(ownJid, own, 'owner'));
     }
+    
+    // Query admin dari Firestore dan kirim parallel
+    try {
+      const adminSnapshot = await firestore.collection('users')
+        .where('role', '==', 'admin')
+        .get();
+      
+      console.log(`📋 Found ${adminSnapshot.size} admin(s) in Firestore`);
+      
+      for (const adminDoc of adminSnapshot.docs) {
+        const adminJid = adminDoc.id; // JID format: 6289xxx@s.whatsapp.net
+        const adminPhone = adminJid.split('@')[0];
+        
+        // Skip jika sudah ada di owner list
+        if (global.owner.includes(adminPhone)) {
+          console.log(`⏭️ Skip admin ${adminPhone} (already in owner list)`);
+          continue;
+        }
+        
+        sendPromises.push(sendNotification(adminJid, adminPhone, 'admin'));
+      }
+    } catch (err) {
+      console.error('Error fetching admins from Firestore:', err.message);
+    }
+    
+    // Kirim semua parallel dengan timeout protection
+    await Promise.allSettled(sendPromises);
+    console.log(`📤 Notification sent to ${notifiedPhones.size} recipient(s)`);
     
     // Hapus temp file setelah kirim ke admin
     try {
@@ -1380,66 +1344,59 @@ case 'lihat_bukti': {
   if (!isAdmin) return m.reply('❌ Hanya admin/owner yang bisa!');
   
   const refID = text;
-  if (!refID || !global.pendingPayments || !global.pendingPayments[refID]) {
-    return m.reply('❌ Ref ID tidak ditemukan!');
+  if (!refID) {
+    return m.reply('❌ Format salah!\nContoh: .show [refID]');
   }
 
-  const data = global.pendingPayments[refID];
-  
   try {
-    // Download image dari URL dan kirim ke admin (dengan retry logic)
-    if (data.mediaPath) {
-      try {
-        let imageBuffer = null;
-        let retries = 2;
-        
-        while (retries > 0) {
-          try {
-            imageBuffer = await getBuffer(data.mediaPath);
-            if (imageBuffer && !imageBuffer.message) break;
-          } catch (err) {
-            retries--;
-            if (retries > 0) await sleep(1000);
-          }
-        }
-        
-        if (imageBuffer && !imageBuffer.message) {
-          await client.sendMessage(m.chat, { 
-            image: imageBuffer,
-            caption: `📸 *BUKTI TRANSFER ${data.refID}*
+    // Load dari Firestore jika tidak ada di memory (setelah restart)
+    let data = global.pendingPayments?.[refID];
+    
+    if (!data) {
+      console.log(`⚠️ RefID ${refID} not in memory, loading from Firestore...`);
+      const firestore = admin.firestore();
+      const buktiDoc = await firestore.collection('bukti_transfer').doc(refID).get();
+      
+      if (!buktiDoc.exists) {
+        return m.reply('❌ Ref ID tidak ditemukan di sistem!');
+      }
+      
+      // Convert Firestore data ke format memory
+      const buktiData = buktiDoc.data();
+      data = {
+        refID: buktiData.refID,
+        userJid: buktiData.userJid,
+        userName: buktiData.userName,
+        userPhone: buktiData.userPhone,
+        jumlah: buktiData.jumlah,
+        catatan: buktiData.catatan,
+        mediaPath: buktiData.mediaPath,
+        createdAt: buktiData.createdAt.toDate ? buktiData.createdAt.toDate() : buktiData.createdAt,
+        status: buktiData.status
+      };
+      
+      // Simpan ke memory untuk next time
+      if (!global.pendingPayments) global.pendingPayments = {};
+      global.pendingPayments[refID] = data;
+    }
+  
+    // Data bukti transfer tersimpan di chat admin sebagai image
+    m.reply(`📸 *BUKTI TRANSFER ${data.refID}*
 
 > Dari : ${data.userName} (${data.userPhone})
 > Jumlah : Rp ${data.jumlah.toLocaleString('id-ID')}
 > Catatan : ${data.catatan}
 > Waktu : ${data.createdAt.toLocaleString('id-ID')}
 ┈ׅ──ۄ─꯭─꯭──────꯭ׄ──ׅ┈
-
-🔗 Link: ${data.mediaPath}
-
-*Status: ${data.status.toUpperCase()}*`
-          }, { quoted: m });
-        } else {
-          m.reply(`📸 *BUKTI TRANSFER ${data.refID}*
-
-> Dari : ${data.userName} (${data.userPhone})
-> Jumlah : Rp ${data.jumlah.toLocaleString('id-ID')}
-> Catatan : ${data.catatan}
-> Waktu : ${data.createdAt.toLocaleString('id-ID')}
-┈ׅ──ۄ─꯭─꯭──────꯭ׄ──ׅ┈
-
-🔗 Link: ${data.mediaPath}
 
 *Status: ${data.status.toUpperCase()}*
 
-⚠️ (Gambar tidak bisa dimuat, buka link di atas)`);
-        }
-      } catch (err) {
-        m.reply(`Error: ${err.message}`);
-      }
-    }
+💡 *Bukti transfer sudah tersimpan di chat admin* (cek notifikasi bukti transfer yang masuk di chat owner). Scroll up untuk melihat image yang dikirim sebelumnya.`);
   } catch (err) {
+    console.error('Error:', err);
     m.reply(`❌ Error: ${err.message}`);
   }
+  
   break;
 }
 
@@ -1448,12 +1405,75 @@ case 'approve_bukti': {
   if (!isAdmin) return m.reply('❌ Hanya admin/owner yang bisa!');
   
   const refID = text;
-  if (!refID || !global.pendingPayments || !global.pendingPayments[refID]) {
-    return m.reply('❌ Ref ID tidak ditemukan!');
+  if (!refID) {
+    return m.reply('❌ Format salah!\nContoh: .acc [refID]');
   }
 
   try {
-    const data = global.pendingPayments[refID];
+    // Load dari Firestore jika tidak ada di memory (setelah restart)
+    let data = global.pendingPayments?.[refID];
+    
+    if (!data) {
+      console.log(`⚠️ RefID ${refID} not in memory, loading from Firestore...`);
+      const firestore = admin.firestore();
+      const buktiDoc = await firestore.collection('bukti_transfer').doc(refID).get();
+      
+      if (!buktiDoc.exists) {
+        return m.reply('❌ Ref ID tidak ditemukan di sistem!');
+      }
+      
+      // Convert Firestore data ke format memory
+      const buktiData = buktiDoc.data();
+      data = {
+        refID: buktiData.refID,
+        userJid: buktiData.userJid,
+        userName: buktiData.userName,
+        userPhone: buktiData.userPhone,
+        jumlah: buktiData.jumlah,
+        catatan: buktiData.catatan,
+        mediaPath: buktiData.mediaPath,
+        createdAt: buktiData.createdAt.toDate ? buktiData.createdAt.toDate() : buktiData.createdAt,
+        status: buktiData.status,
+        approvedAt: buktiData.approvedAt ? (buktiData.approvedAt.toDate ? buktiData.approvedAt.toDate() : buktiData.approvedAt) : null,
+        approvedBy: buktiData.approvedBy || null,
+        rejectedAt: buktiData.rejectedAt ? (buktiData.rejectedAt.toDate ? buktiData.rejectedAt.toDate() : buktiData.rejectedAt) : null,
+        rejectedBy: buktiData.rejectedBy || null,
+        alasan: buktiData.alasan || null
+      };
+      
+      // Simpan ke memory untuk next time
+      if (!global.pendingPayments) global.pendingPayments = {};
+      global.pendingPayments[refID] = data;
+      
+      console.log(`✅ Loaded from Firestore: ${refID}, status: ${data.status}`);
+    }
+    
+    // Check jika sudah di-approve sebelumnya (prevent duplicate)
+    if (data.status === 'approved') {
+      return m.reply(`⚠️ *BUKTI SUDAH DI-APPROVE SEBELUMNYA*
+
+> Kode Bukti : ${refID}
+> Dari : ${data.userName} (${data.userPhone})
+> Jumlah : Rp ${data.jumlah.toLocaleString('id-ID')}
+> Status : ${data.status.toUpperCase()}
+> Approved oleh : ${data.approvedBy || 'Unknown'}
+> Approved pada : ${data.approvedAt ? new Date(data.approvedAt).toLocaleString('id-ID') : 'Unknown'}
+┈ׅ──ۄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+❌ *Tidak bisa approve lagi - duplikat tiket tidak diperbolehkan!*`);
+    }
+    
+    // Check jika sudah di-reject
+    if (data.status === 'rejected') {
+      return m.reply(`⚠️ *BUKTI TRANSFER SUDAH DI-REJECT*
+
+> Kode Bukti : ${refID}
+> Status : ${data.status.toUpperCase()}
+┈ׅ──ۄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+💡 Bukti transfer ini sudah ditolak sebelumnya. Jika ingin approve, user harus kirim bukti transfer baru.`);
+    }
+    
     const userJid = data.userJid;
     
     // Generate QR code tiket (2 = Tiket, 13 digit total)
@@ -1499,20 +1519,18 @@ case 'approve_bukti': {
 ┈ׅ──˄─꯭─꯭──────꯭ׄ──ׅ┈
 
 🎫 *QR CODE TIKET (SIMPAN BAIK-BAIK)*
-File QR code terlampir di bawah.`;
+Gambar QR code terlampir di bawah.`;
 
-    // Send QR code sebagai document/file (paling robust, no external hosting)
+    // Send QR code sebagai image (lebih cepat & reliable)
     try {
       await client.sendMessage(userJid, {
-        document: fs.readFileSync(tmpQRPath),
-        fileName: `Tiket_UMBandungFest_${ticketID}.png`,
-        mimetype: 'image/png',
+        image: fs.readFileSync(tmpQRPath),
         caption: ticketMsg
       });
-      ticketSentStatus = '✅ QR Code terkirim sebagai file';
-      console.log(`✅ QR code sent as document to ${userJid}`);
+      ticketSentStatus = '✅ QR Code terkirim';
+      console.log(`✅ QR code sent as image to ${userJid}`);
     } catch (e) {
-      console.log('⚠️ Error sending QR as document:', e.message);
+      console.log('⚠️ Error sending QR as image:', e.message);
       // Fallback: kirim text dengan wa.me link
       await client.sendMessage(userJid, { 
         text: `${ticketMsg}\n\n🔗 Scan link ini untuk verifikasi:\n${qrData}` 
@@ -1579,8 +1597,11 @@ ${ticketSentStatus}`);
       qrCode: null // QR dikirim sebagai file
     });
 
-    // Update status
+    // Update status di memory
     data.status = 'approved';
+    data.approvedAt = new Date();
+    data.approvedBy = adminPhone;
+    data.ticketID = ticketID;
     global.pendingPayments[refID] = data;
 
   } catch (err) {
@@ -1598,13 +1619,84 @@ case 'reject_bukti': {
   const refID = parts[0];
   const alasan = parts.slice(1).join(' ');
 
-  if (!refID || !global.pendingPayments || !global.pendingPayments[refID]) {
-    return m.reply('❌ Ref ID tidak ditemukan!\nFormat: .reject_bukti [ref_id] [alasan]');
+  if (!refID) {
+    return m.reply('❌ Format salah!\nContoh: .reject [refID] [alasan]');
   }
 
   try {
-    const data = global.pendingPayments[refID];
+    // Load dari Firestore jika tidak ada di memory (setelah restart)
+    let data = global.pendingPayments?.[refID];
+    
+    if (!data) {
+      console.log(`⚠️ RefID ${refID} not in memory, loading from Firestore...`);
+      const firestore = admin.firestore();
+      const buktiDoc = await firestore.collection('bukti_transfer').doc(refID).get();
+      
+      if (!buktiDoc.exists) {
+        return m.reply('❌ Ref ID tidak ditemukan di sistem!');
+      }
+      
+      // Convert Firestore data ke format memory
+      const buktiData = buktiDoc.data();
+      data = {
+        refID: buktiData.refID,
+        userJid: buktiData.userJid,
+        userName: buktiData.userName,
+        userPhone: buktiData.userPhone,
+        jumlah: buktiData.jumlah,
+        catatan: buktiData.catatan,
+        mediaPath: buktiData.mediaPath,
+        createdAt: buktiData.createdAt.toDate ? buktiData.createdAt.toDate() : buktiData.createdAt,
+        status: buktiData.status,
+        approvedAt: buktiData.approvedAt ? (buktiData.approvedAt.toDate ? buktiData.approvedAt.toDate() : buktiData.approvedAt) : null,
+        approvedBy: buktiData.approvedBy || null,
+        rejectedAt: buktiData.rejectedAt ? (buktiData.rejectedAt.toDate ? buktiData.rejectedAt.toDate() : buktiData.rejectedAt) : null,
+        rejectedBy: buktiData.rejectedBy || null,
+        alasan: buktiData.alasan || null,
+        ticketID: buktiData.ticketID || null
+      };
+      
+      // Simpan ke memory untuk next time
+      if (!global.pendingPayments) global.pendingPayments = {};
+      global.pendingPayments[refID] = data;
+      
+      console.log(`✅ Loaded from Firestore: ${refID}, status: ${data.status}`);
+    }
+    
+    // Check jika sudah di-approve sebelumnya
+    if (data.status === 'approved') {
+      return m.reply(`⚠️ *BUKTI SUDAH DI-APPROVE*
+
+> Kode Bukti : ${refID}
+> Status : ${data.status.toUpperCase()}
+> Tiket ID : ${data.ticketID || 'N/A'}
+┈ׅ──ۄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+❌ *Tidak bisa reject - tiket sudah digenerate!* Jika ada masalah, hubungi user langsung.`);
+    }
+    
+    // Check jika sudah di-reject sebelumnya
+    if (data.status === 'rejected') {
+      return m.reply(`⚠️ *BUKTI SUDAH DI-REJECT SEBELUMNYA*
+
+> Kode Bukti : ${refID}
+> Rejected oleh : ${data.rejectedBy || 'Unknown'}
+> Rejected pada : ${data.rejectedAt ? new Date(data.rejectedAt).toLocaleString('id-ID') : 'Unknown'}
+> Alasan : ${data.alasan || 'N/A'}
+┈ׅ──ۄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+❌ *Sudah ditolak, tidak perlu reject lagi.*`);
+    }
+    
     const userJid = data.userJid;
+    
+    // Extract admin phone number yang reject
+    let adminPhone = null;
+    if (m.key?.senderPn) {
+      adminPhone = m.key.senderPn.split('@')[0];
+    } else {
+      adminPhone = m.sender.split('@')[0];
+    }
 
     // Notify user
     const rejectMsg = `❌ *BUKTI TRANSFER DITOLAK*
@@ -1634,12 +1726,15 @@ wa.me/${global.nomerOwner}`;
     await firestore.collection('bukti_transfer').doc(refID).update({
       status: 'rejected',
       rejectedAt: new Date(),
-      rejectedBy: m.sender,
-      alasan: alasan
+      rejectedBy: adminPhone,
+      alasan: alasan || 'Data tidak sesuai'
     });
 
-    // Update status
+    // Update status di memory
     data.status = 'rejected';
+    data.rejectedAt = new Date();
+    data.rejectedBy = adminPhone;
+    data.alasan = alasan || 'Data tidak sesuai';
     global.pendingPayments[refID] = data;
 
   } catch (err) {
@@ -1651,6 +1746,7 @@ wa.me/${global.nomerOwner}`;
 
 case 'scan': {
   if (!isAdmin) return m.reply('❌ Hanya admin/owner yang bisa scan tiket!');
+  
   if (!text) return m.reply('Format: .scan [ticketID] [securityCode]\nContoh: .scan 2123456789012 512345');
   
   try {
@@ -1680,7 +1776,7 @@ _Tiket tidak terdaftar di sistem!_`);
       return m.reply(`❌ *TIKET SUDAH DIPAKAI*
 
 > ID : ${ticketID}
-> Pembeli : ${ticketData.buyerName}
+> Pembeli : ${ticketData.buyerName} (${ticketData.buyerPhone})
 > Konser : ${ticketData.konser}
 > Scan Waktu : ${new Date(ticketData.scannedAt.toDate()).toLocaleString('id-ID')}
 
@@ -1693,7 +1789,7 @@ _Tiket sudah digunakan - kemungkinan duplikat!_`);
 
 > ID : ${ticketID}
 > Status : ${ticketData.status}
-> Pembeli : ${ticketData.buyerName}
+> Pembeli : ${ticketData.buyerName} (${ticketData.buyerPhone})
 > Konser : ${ticketData.konser}
 
 _Tiket ini tidak lagi valid!_`);
@@ -1728,7 +1824,7 @@ _Kode tidak cocok - kemungkinan tiket palsu!_`);
     const successMsg = `✅ *TIKET VALID - BOLEH MASUK*
 
 > ID : ${ticketID}
-> Nama : ${ticketData.buyerName}
+> Pembeli : ${ticketData.buyerName} (${ticketData.buyerPhone})
 > Konser : ${ticketData.konser}
 > Harga : Rp ${ticketData.harga.toLocaleString('id-ID')}
 > Jam Scan : ${new Date().toLocaleString('id-ID')}
