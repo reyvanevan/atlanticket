@@ -206,34 +206,24 @@ const command = cleanBody.replace(prefix, '').trim().split(/ +/).shift().toLower
     try {
       const firestore = admin.firestore();
       
-      // Extract the actual user's phone number using senderPn (most reliable)
-      // m.key.senderPn contains the actual sender's phone number
-      let userPhone = m.key?.senderPn;
-      
-      // Fallback: try to extract from other sources
-      if (!userPhone) {
-        // For private chats, try m.key.remoteJid
-        const remoteJid = m.key?.remoteJid;
-        if (remoteJid && remoteJid.includes('@')) {
-          const parts = remoteJid.split('@')[0];
-          // Only use if it looks like a phone number (all digits)
-          if (/^\d+$/.test(parts)) {
-            userPhone = parts;
-          }
-        }
+      // Extract phone number using same logic as bukti_transfer (yang berhasil!)
+      // Priority 1: m.key.senderPn jika ada
+      let phoneNumber = null;
+      if (m.key?.senderPn) {
+        phoneNumber = m.key.senderPn.split('@')[0];
       }
       
-      // Last resort fallback
-      if (!userPhone && m.sender) {
-        userPhone = m.sender.split('@')[0];
+      // Priority 2: fallback ke m.sender (ini yang selalu berhasil!)
+      if (!phoneNumber && m.sender) {
+        phoneNumber = m.sender.split('@')[0];
       }
       
+      console.log(color(`[ROLE_CHECK_DEBUG] m.sender: ${m.sender}`, 'yellow'));
       console.log(color(`[ROLE_CHECK_DEBUG] m.key.senderPn: ${m.key?.senderPn}`, 'yellow'));
-      console.log(color(`[ROLE_CHECK_DEBUG] m.key.remoteJid: ${m.key?.remoteJid}`, 'yellow'));
-      console.log(color(`[ROLE_CHECK_DEBUG] extracted userPhone: ${userPhone}`, 'yellow'));
+      console.log(color(`[ROLE_CHECK_DEBUG] extracted phoneNumber: ${phoneNumber}`, 'yellow'));
       
-      // Build the JID to look up
-      let lookupJid = userPhone + '@s.whatsapp.net';
+      // Build JID untuk lookup di Firestore
+      const lookupJid = phoneNumber + '@s.whatsapp.net';
       console.log(color(`[ROLE_CHECK_DEBUG] lookupJid: ${lookupJid}`, 'yellow'));
       
       const userDoc = await firestore.collection('users').doc(lookupJid).get();
