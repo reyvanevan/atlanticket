@@ -655,7 +655,7 @@ case 'menu': {
       return m.reply('❌ Belum ada konser yang tersedia. Hubungi admin!');
     }
 
-    let menuText = `🎫 *TIKET KONSER ATLANTICKET* 🎫
+    let menuText = `🎫 *TIKET KONSER UMBANDUNG* 🎫
 
 > Pilih konser yang ingin Anda beli:
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈\n`;
@@ -1916,7 +1916,7 @@ case 'addrole': {
     // Send notification to target user
     const notifMsg = `👨‍💼 *NOTIFIKASI AKSES ADMIN*
 
-Anda telah ditambahkan sebagai admin di AtlanTicket Bot!
+Anda telah ditambahkan sebagai admin di UMBandungFest Bot!
 
 > Role : ${role.toUpperCase()}
 > Disetujui oleh : ${m.pushName || 'Owner'}
@@ -2040,7 +2040,7 @@ case 'addadmin': {
     // Send notification to target user
     const notifMsg = `👨‍💼 *SELAMAT! ANDA ADMIN*
 
-Anda telah ditambahkan sebagai admin di AtlanTicket Bot!
+Anda telah ditambahkan sebagai admin di UMBandungFest Bot!
 
 > Role : ADMIN
 > Disetujui oleh : ${m.pushName || 'Owner'}
