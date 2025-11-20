@@ -619,7 +619,7 @@ case 'menu': {
     let index = 1;
     konserSnapshot.forEach(doc => {
       const data = doc.data();
-      menuText += `\n${index}️⃣ *${data.nama}*
+      menuText += `\n${index}. *${data.nama}*
 > Tanggal : ${data.tanggal}
 > Jam : ${data.jam}
 > Harga : Rp ${data.harga.toLocaleString('id-ID')}
@@ -649,12 +649,12 @@ case 'help': {
 > Akses penuh ke semua fitur
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-1️⃣ *MANAJEMEN KONSER*
+1. *MANAJEMEN KONSER*
 > \`.setup_konser\` [nama] | [tgl] | [jam] | [lokasi] | [harga] | [stok] | [deskripsi]
 > \`.confirm_setup\`
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-2️⃣ *MANAJEMEN ROLE*
+2. *MANAJEMEN ROLE*
 > \`.addrole\` [nomor] [role]
 > \`.removerole\` [nomor]
 > \`.getrole\` [nomor]
@@ -662,7 +662,7 @@ case 'help': {
 > \`.rmadmin\` [nomor]
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-3️⃣ *LIHAT TRANSAKSI*
+3. *LIHAT TRANSAKSI*
 > \`.riwayat\`
 > \`.riwayat pending\`
 > \`.riwayat acc\`
@@ -670,7 +670,7 @@ case 'help': {
 > \`.riwayat\` [nomor_hp]
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-4️⃣ *SISTEM*
+4. *SISTEM*
 > \`.setbot\` [key] [value]
 > \`.ping\`
 > \`.menu\`
@@ -682,21 +682,21 @@ case 'help': {
 > Kelola tiket & verifikasi pembayaran
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-1️⃣ *VERIFIKASI PEMBAYARAN*
+1. *VERIFIKASI PEMBAYARAN*
 > \`.show\` [refID]
 > \`.acc\` [refID]
 > \`.reject\` [refID] [alasan]
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-2️⃣ *LIHAT TRANSAKSI*
+2. *LIHAT TRANSAKSI*
 > \`.riwayat\`
 > \`.riwayat pending\`
 > \`.riwayat acc\`
 > \`.riwayat reject\`
 > \`.riwayat\` [nomor_hp]
-┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+┈ׅ──��─꯭─꯭──────꯭ׄ──ׅ┈
 
-3️⃣ *SISTEM*
+3. *SISTEM*
 > \`.ping\`
 > \`.menu\`
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
@@ -713,19 +713,19 @@ case 'help': {
 > Pesan dan beli tiket konser
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-1️⃣ *PEMBELIAN TIKET*
+1. *PEMBELIAN TIKET*
 > \`.menu\`
 > \`.order\` [nomor]
 > \`.checkout\`
 > \`.bukti_transfer\` [jumlah] [catatan]
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-2️⃣ *LIHAT RIWAYAT*
+2. *LIHAT RIWAYAT*
 > \`.riwayat\`
 > \`.riwayat tiket\`
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-3️⃣ *SISTEM*
+3. *SISTEM*
 > \`.ping\`
 > \`.help\`
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
@@ -1480,7 +1480,11 @@ case 'addrole': {
       updatedBy: m.sender
     }, { merge: true });
     
-    m.reply(`✅ Role berhasil diupdate!\n\n> Nomor : ${targetPhone}\n> Role : ${role.toUpperCase()}`);
+    m.reply(`✅ Role berhasil diupdate!
+
+> Nomor : ${targetPhone}
+> Role : ${role.toUpperCase()}
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈`);
   } catch (err) {
     m.reply(`❌ Error: ${err.message}`);
   }
@@ -1504,7 +1508,10 @@ case 'removerole': {
       updatedBy: m.sender
     });
     
-    m.reply(`✅ Role berhasil direset ke user!\n\n> Nomor : ${targetPhone}`);
+    m.reply(`✅ Role berhasil direset ke user!
+
+> Nomor : ${targetPhone}
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈`);
   } catch (err) {
     m.reply(`❌ Error: ${err.message}`);
   }
@@ -1559,7 +1566,11 @@ case 'addadmin': {
       updatedBy: m.sender
     }, { merge: true });
     
-    m.reply(`✅ Berhasil ditambahkan sebagai admin!\n\n> Nomor : ${targetPhone}\n> Role : ADMIN`);
+    m.reply(`✅ Berhasil ditambahkan sebagai admin!
+
+> Nomor : ${targetPhone}
+> Role : ADMIN
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈`);
   } catch (err) {
     m.reply(`❌ Error: ${err.message}`);
   }
