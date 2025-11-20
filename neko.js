@@ -1978,8 +1978,8 @@ case 'rmadmin': {
         let totalTicketSpent = 0;
         allTickets.forEach((data, idx) => {
           totalTicketSpent += data.harga;
-          const icon = getStatusIcon(data.status === 'aktif' ? 'approved' : 'rejected');
-          riwayatText += `\n${idx + 1}. ${icon} *${data.ticketID}*
+          const statusIcon = data.status === 'aktif' ? '✅' : '❌';
+          riwayatText += `\n${idx + 1}. ${statusIcon} *${data.ticketID}*
 > Konser : ${data.konser}
 > Harga : Rp ${data.harga.toLocaleString('id-ID')}
 > Status : ${data.status === 'aktif' ? '✅ Aktif' : '❌ Expired'}
@@ -2007,8 +2007,8 @@ case 'rmadmin': {
         let totalBuktiSpent = 0;
         allData.forEach((data, idx) => {
           totalBuktiSpent += data.jumlah;
-          const icon = getStatusIcon(data.status);
-          riwayatText += `\n${idx + 1}. ${icon} *${data.refID}*
+          const statusIcon = data.status === 'pending' ? '⏳' : data.status === 'approved' ? '✅' : '❌';
+          riwayatText += `\n${idx + 1}. ${statusIcon} *${data.refID}*
 > Jumlah : Rp ${data.jumlah.toLocaleString('id-ID')}
 > Status : ${data.status === 'pending' ? '⏳ Menunggu' : data.status === 'approved' ? '✅ Disetujui' : '❌ Ditolak'}
 > Waktu : ${new Date(data.createdAt.toDate()).toLocaleString('id-ID')}`;
