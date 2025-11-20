@@ -1378,7 +1378,15 @@ case 'approve_bukti': {
     const moment = require('moment-timezone');
     const ticketTimestamp = Math.floor(Date.now() / 1000).toString().slice(-12);
     const ticketID = `2${ticketTimestamp}`;
-    const qrData = `${ticketID}-${data.jumlah}-UMBandung Fest`;
+    
+    // Generate security code (6 random digits)
+    const securityCode = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Create wa.me link dengan scan command
+    const botPhone = nomerBot.replace(/[^0-9]/g, '');
+    const scanCommand = `.scan ${ticketID} ${securityCode}`;
+    const encodedText = encodeURIComponent(scanCommand);
+    const qrData = `https://wa.me/${botPhone}?text=${encodedText}`;
     
     // Generate QR code to temp
     const qrcode = require('qrcode');
@@ -1483,6 +1491,7 @@ case 'approve_bukti': {
       harga: data.jumlah,
       qrCode: qrUrl || null,
       status: 'aktif',
+      securityCode: securityCode,
       createdAt: new Date(),
       approvedAt: new Date(),
       approvedBy: m.sender,
@@ -1561,6 +1570,94 @@ wa.me/${global.nomerOwner}`;
     data.status = 'rejected';
     global.pendingPayments[refID] = data;
 
+  } catch (err) {
+    console.error('Error:', err);
+    m.reply(`❌ Error: ${err.message}`);
+  }
+  break;
+}
+
+case 'scan': {
+  if (!isAdmin) return m.reply('❌ Hanya admin/owner yang bisa scan tiket!');
+  if (!text) return m.reply('Format: .scan [ticketID] [securityCode]\nContoh: .scan 2123456789012 512345');
+  
+  try {
+    const parts = text.split(' ');
+    const ticketID = parts[0];
+    const securityCode = parts[1];
+    
+    if (!ticketID || !securityCode) {
+      return m.reply('Format: .scan [ticketID] [securityCode]');
+    }
+    
+    const firestore = admin.firestore();
+    const ticketDoc = await firestore.collection('tickets').doc(ticketID).get();
+    
+    if (!ticketDoc.exists) {
+      return m.reply(`❌ *TIKET TIDAK DITEMUKAN*
+
+> ID : ${ticketID}
+
+_Tiket tidak terdaftar di sistem!_`);
+    }
+    
+    const ticketData = ticketDoc.data();
+    
+    // Check if ticket already used
+    if (ticketData.status === 'used') {
+      return m.reply(`❌ *TIKET SUDAH DIPAKAI*
+
+> ID : ${ticketID}
+> Pembeli : ${ticketData.buyerName}
+> Konser : ${ticketData.konser}
+> Scan Waktu : ${new Date(ticketData.scannedAt.toDate()).toLocaleString('id-ID')}
+
+_Tiket sudah digunakan - kemungkinan duplikat!_`);
+    }
+    
+    // Check if ticket is still valid
+    if (ticketData.status !== 'aktif') {
+      return m.reply(`❌ *TIKET TIDAK VALID*
+
+> ID : ${ticketID}
+> Status : ${ticketData.status}
+> Pembeli : ${ticketData.buyerName}
+> Konser : ${ticketData.konser}
+
+_Tiket ini tidak lagi valid!_`);
+    }
+    
+    // Verify security code
+    if (ticketData.securityCode !== securityCode) {
+      return m.reply(`❌ *KODE KEAMANAN SALAH*
+
+> ID : ${ticketID}
+> Kode yang dikirim : ${securityCode}
+
+_Kode tidak cocok - kemungkinan tiket palsu!_`);
+    }
+    
+    // Mark ticket as used
+    await firestore.collection('tickets').doc(ticketID).update({
+      status: 'used',
+      scannedAt: new Date(),
+      scannedBy: m.sender
+    });
+    
+    // Send success reply to admin
+    const successMsg = `✅ *TIKET VALID - BOLEH MASUK*
+
+> ID : ${ticketID}
+> Nama : ${ticketData.buyerName}
+> Konser : ${ticketData.konser}
+> Harga : Rp ${ticketData.harga.toLocaleString('id-ID')}
+> Jam Scan : ${new Date().toLocaleString('id-ID')}
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+🎫 Tiket valid & sudah diverifikasi`;
+    
+    m.reply(successMsg);
+    
   } catch (err) {
     console.error('Error:', err);
     m.reply(`❌ Error: ${err.message}`);
