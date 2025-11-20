@@ -667,7 +667,6 @@ case 'menu': {
 > Tanggal : ${data.tanggal}
 > Jam : ${data.jam}
 > Harga : Rp ${data.harga.toLocaleString('id-ID')}
-> Stok : ${data.stokTersisa} tiket
 > Status : ✅
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈`;
       index++;
@@ -1274,11 +1273,12 @@ Kirim gambar + tuliskan:
 > Kode Bukti : ${refID}
 > Jumlah : Rp ${jumlah.toLocaleString('id-ID')}
 > Catatan : ${catatan}
-> Status : ⏳ Menunggu verifikasi admin
+> Status : ⏳ Menunggu verifikasi
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-Admin akan verifikasi dalam 5 menit.
-Silahkan tunggu konfirmasi dari admin.`;
+Kami akan verifikasi dalam 1x24 jam.
+Silahkan tunggu konfirmasi dari kami.
+> ketik .riwayat untuk melihat status pembayaran Anda secara berkala.`;
 
     m.reply(confirmText);
 
@@ -1736,6 +1736,30 @@ case 'addrole': {
 > Nomor : ${targetPhone}
 > Role : ${role.toUpperCase()}
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈`);
+
+    // Send notification to target user
+    const notifMsg = `👨‍💼 *NOTIFIKASI AKSES ADMIN*
+
+Anda telah ditambahkan sebagai admin di AtlanTicket Bot!
+
+> Role : ${role.toUpperCase()}
+> Disetujui oleh : ${m.pushName || 'Owner'}
+> Waktu : ${new Date().toLocaleString('id-ID')}
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+📋 *COMMAND ADMIN YANG TERSEDIA:*
+> \`.show\` [refID] - Lihat bukti transfer
+> \`.acc\` [refID] - Approve pembayaran
+> \`.reject\` [refID] [alasan] - Tolak pembayaran
+> \`.scan\` [ticketID] [code] - Scan tiket masuk
+> \`.riwayat\` - Lihat semua transaksi
+> \`.riwayat pending\` - Lihat yang pending
+> \`.riwayat acc\` - Lihat yang disetujui
+> \`.riwayat reject\` - Lihat yang ditolak
+
+Selamat bertugas! 🎯`;
+
+    await client.sendMessage(targetJid, { text: notifMsg });
   } catch (err) {
     m.reply(`❌ Error: ${err.message}`);
   }
@@ -1763,6 +1787,20 @@ case 'removerole': {
 
 > Nomor : ${targetPhone}
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈`);
+
+    // Send notification to target user
+    const notifMsg = `⚠️ *NOTIFIKASI PERUBAHAN AKSES*
+
+Role admin Anda telah dihapus.
+
+> Role Sekarang : USER
+> Diubah oleh : ${m.pushName || 'Owner'}
+> Waktu : ${new Date().toLocaleString('id-ID')}
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+Anda sekarang memiliki akses sebagai user biasa.`;
+
+    await client.sendMessage(targetJid, { text: notifMsg });
   } catch (err) {
     m.reply(`❌ Error: ${err.message}`);
   }
@@ -1822,6 +1860,30 @@ case 'addadmin': {
 > Nomor : ${targetPhone}
 > Role : ADMIN
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈`);
+
+    // Send notification to target user
+    const notifMsg = `👨‍💼 *SELAMAT! ANDA ADMIN*
+
+Anda telah ditambahkan sebagai admin di AtlanTicket Bot!
+
+> Role : ADMIN
+> Disetujui oleh : ${m.pushName || 'Owner'}
+> Waktu : ${new Date().toLocaleString('id-ID')}
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+📋 *COMMAND ADMIN YANG TERSEDIA:*
+> \`.show\` [refID] - Lihat bukti transfer
+> \`.acc\` [refID] - Approve pembayaran
+> \`.reject\` [refID] [alasan] - Tolak pembayaran
+> \`.scan\` [ticketID] [code] - Scan tiket masuk
+> \`.riwayat\` - Lihat semua transaksi
+> \`.riwayat pending\` - Lihat yang pending
+> \`.riwayat acc\` - Lihat yang disetujui
+> \`.riwayat reject\` - Lihat yang ditolak
+
+Selamat bertugas! 🎯`;
+
+    await client.sendMessage(targetJid, { text: notifMsg });
   } catch (err) {
     m.reply(`❌ Error: ${err.message}`);
   }
@@ -1846,6 +1908,20 @@ case 'rmadmin': {
     });
     
     m.reply(`✅ Berhasil dihapus dari admin!\n\n> Nomor : ${targetPhone}\n> Role : USER`);
+
+    // Send notification to target user
+    const notifMsg = `⚠️ *NOTIFIKASI PERUBAHAN AKSES*
+
+Akses admin Anda telah dicabut.
+
+> Role Sekarang : USER
+> Dicabut oleh : ${m.pushName || 'Owner'}
+> Waktu : ${new Date().toLocaleString('id-ID')}
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+Anda sekarang memiliki akses sebagai user biasa.`;
+
+    await client.sendMessage(targetJid, { text: notifMsg });
   } catch (err) {
     m.reply(`❌ Error: ${err.message}`);
   }
