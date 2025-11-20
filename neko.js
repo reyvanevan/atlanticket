@@ -180,6 +180,27 @@ const command = cleanBody.replace(prefix, '').trim().split(/ +/).shift().toLower
     const botNumber = await client.decodeJid(client.user.id)
     const isOwner = [botNumber, ...global.owner].map(v => v.replace(/[^0-9]/g, '') + '@s.whatsapp.net').includes(m.sender)
     
+    // ========== REUSABLE ROLE CHECKER FUNCTION ==========
+    const getUserRole = async (jid = m.sender) => {
+      try {
+        const firestore = admin.firestore();
+        // Normalize JID format
+        let normalizedJid = jid;
+        if (!jid.includes('@s.whatsapp.net')) {
+          const phoneOnly = jid.replace(/[^0-9]/g, '');
+          normalizedJid = phoneOnly + '@s.whatsapp.net';
+        }
+        
+        const userDoc = await firestore.collection('users').doc(normalizedJid).get();
+        if (userDoc.exists && userDoc.data().role) {
+          return userDoc.data().role;
+        }
+      } catch (err) {
+        console.log('Warning: Firestore role check failed:', err.message);
+      }
+      return 'user'; // default role
+    };
+    
     // ========== ROLE SYSTEM FROM FIRESTORE ==========
     let userRole = 'user'; // default role
     try {
@@ -676,7 +697,7 @@ case 'help': {
 > \`.menu\`
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈`;
 
-    } else if (isAdmin) {
+    } else if (userRole === 'admin') {
       // ADMIN COMMANDS
       helpText = `👨‍💼 *ADMIN COMMANDS*
 > Kelola tiket & verifikasi pembayaran
