@@ -819,7 +819,7 @@ case 'order': {
             const adminData = doc.data();
             const adminPhone = adminData.phone || doc.id.split('@')[0];
             const adminName = adminData.name || 'Admin ' + adminCount;
-            adminInfo += `\n${adminCount}. ${adminName}\n   > wa.me/${adminPhone}`;
+            adminInfo += `\n${adminCount}. ${adminName}\n> wa.me/${adminPhone}`;
             adminCount++;
           });
         }
@@ -835,7 +835,6 @@ case 'order': {
 > Jam : ${konser.jam}
 > Lokasi : ${konser.lokasi}
 > Harga : Rp ${konser.harga.toLocaleString('id-ID')}
-> Stok : ${konser.stokTersisa} tiket
 > Info : ${konser.deskripsi}
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
