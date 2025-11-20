@@ -1432,6 +1432,55 @@ case 'getrole': {
   }
   break;
 }
+
+case 'addadmin': {
+  if (!isDeveloper) return m.reply('❌ Hanya Developer yang bisa!');
+  
+  if (!text) return m.reply('Format: .addadmin [nomor]\nContoh: .addadmin 6285871756001');
+  
+  const targetPhone = text.trim();
+  
+  try {
+    const firestore = admin.firestore();
+    const targetJid = targetPhone.replace(/[^0-9]/g, '') + '@s.whatsapp.net';
+    
+    await firestore.collection('users').doc(targetJid).set({
+      phone: targetPhone.replace(/[^0-9]/g, ''),
+      role: 'admin',
+      updatedAt: new Date(),
+      updatedBy: m.sender
+    }, { merge: true });
+    
+    m.reply(`✅ Berhasil ditambahkan sebagai admin!\n\n> Nomor : ${targetPhone}\n> Role : ADMIN`);
+  } catch (err) {
+    m.reply(`❌ Error: ${err.message}`);
+  }
+  break;
+}
+
+case 'rmadmin': {
+  if (!isDeveloper) return m.reply('❌ Hanya Developer yang bisa!');
+  
+  if (!text) return m.reply('Format: .rmadmin [nomor]\nContoh: .rmadmin 6285871756001');
+  
+  const targetPhone = text.trim();
+  
+  try {
+    const firestore = admin.firestore();
+    const targetJid = targetPhone.replace(/[^0-9]/g, '') + '@s.whatsapp.net';
+    
+    await firestore.collection('users').doc(targetJid).update({
+      role: 'user',
+      updatedAt: new Date(),
+      updatedBy: m.sender
+    });
+    
+    m.reply(`✅ Berhasil dihapus dari admin!\n\n> Nomor : ${targetPhone}\n> Role : USER`);
+  } catch (err) {
+    m.reply(`❌ Error: ${err.message}`);
+  }
+  break;
+}
             
    case 'min':
    case 'admin':
