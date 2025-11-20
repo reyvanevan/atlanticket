@@ -1067,38 +1067,77 @@ case 'batal': {
 }
 
 case 'bukti':
+case 'bukti_tf':
 case 'bukti_transfer': {
   if (isAdmin && !isOwner) return m.reply('❌ Admin tidak bisa upload bukti! Hanya user biasa.');
-  // User upload bukti transfer dengan media
-  if (!m.quoted || !m.quoted.mtype || !m.quoted.mtype.includes('imageMessage')) {
-    return m.reply(`📤 *FORMAT KIRIM BUKTI TRANSFER*
+  
+  // Support 2 cara: reply ke gambar, atau kirim gambar langsung dengan caption
+  let hasImage = false;
+  let jumlah = null;
+  let catatan = '';
+  
+  // Method 1: Reply ke gambar (old way)
+  if (m.quoted && m.quoted.mtype && m.quoted.mtype.includes('imageMessage')) {
+    hasImage = true;
+    if (!text) {
+      return m.reply('Format: .bukti_tf [jumlah] [catatan]\nContoh: .bukti_tf 25000 1 tiket UMBandung Fest');
+    }
+    const parts = text.split(' ');
+    jumlah = parseInt(parts[0]);
+    catatan = parts.slice(1).join(' ');
+  }
+  // Method 2: Direct image with caption (new way)
+  else if (m.mtype && m.mtype.includes('imageMessage')) {
+    hasImage = true;
+    if (!text) {
+      return m.reply(`📤 *FORMAT KIRIM BUKTI TRANSFER*
 
-Caranya:
-1. Kirim screenshot bukti transfer
-2. Reply screenshot dengan: .bukti_transfer [jumlah] [catatan]
+Kirim gambar + caption dengan format:
+.bukti_tf [jumlah] [catatan]
 
 *Contoh:*
-User kirim gambar transfer, terus balas dengan:
-\`.bukti_transfer 25000 UMBandung Fest - 1 tiket\`
+Kirim screenshot + tulis: .bukti_tf 25000 1 tiket UMBandung Fest
+
+⚠️ *PENTING:*
+> Screenshot harus jelas
+> Berisi nama rekening, jumlah, dan waktu transfer
+> Admin akan verifikasi dalam 5 menit`);
+    }
+    const parts = text.split(' ');
+    jumlah = parseInt(parts[0]);
+    catatan = parts.slice(1).join(' ');
+  }
+  // Method 3: Show help if no image
+  else {
+    return m.reply(`📤 *FORMAT KIRIM BUKTI TRANSFER*
+
+✅ *Cara Terbaru (PALING MUDAH):*
+Kirim screenshot bukti transfer dengan caption:
+.bukti_tf [jumlah] [catatan]
+
+*Contoh:*
+Kirim gambar + tuliskan:
+.bukti_tf 25000 1 tiket UMBandung Fest
+
+✅ *Cara Lama (Masih Bisa):*
+1. Kirim screenshot bukti transfer
+2. Reply screenshot dengan: .bukti_tf [jumlah] [catatan]
 
 ⚠️ *PENTING:*
 > Screenshot harus jelas
 > Berisi nama rekening, jumlah, dan waktu transfer
 > Admin akan verifikasi dalam 5 menit`);
   }
-
-  if (!text) {
-    return m.reply('Format: .bukti_transfer [jumlah] [catatan]\nContoh: .bukti_transfer 25000 UMBandung Fest - 1 tiket');
+  
+  if (!hasImage) {
+    return m.reply('❌ Tidak ada gambar yang terdeteksi!');
+  }
+  
+  if (isNaN(jumlah)) {
+    return m.reply('❌ Jumlah harus berupa angka!\nContoh: .bukti_tf 25000 1 tiket');
   }
 
   try {
-    const parts = text.split(' ');
-    const jumlah = parseInt(parts[0]);
-    const catatan = parts.slice(1).join(' ');
-
-    if (isNaN(jumlah)) {
-      return m.reply('❌ Jumlah harus berupa angka!');
-    }
 
     // Download image
     const timestamp = Date.now();
