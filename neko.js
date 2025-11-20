@@ -1289,9 +1289,25 @@ wa.me/${global.nomerOwner}`;
   break;
 }
 			
-case 'bot': {
-  let pesanBot;
-  client.sendMessage(m.chat, { text: pesanBot }, { quoted: m });
+case 'ping': {
+  if (isGroup) return m.reply('❌ Perintah ini hanya bisa digunakan di Private Chat');
+  
+  const uptime = process.uptime();
+  const hours = Math.floor(uptime / 3600);
+  const minutes = Math.floor((uptime % 3600) / 60);
+  const seconds = Math.floor(uptime % 60);
+  const uptimeStr = `${hours}h ${minutes}m ${seconds}s`;
+  
+  const memUsage = (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2);
+  const nodeVersion = process.version;
+  
+  m.reply(`🏓 *PONG!*
+
+> Bot Status : 🟢 Online
+> Uptime : ${uptimeStr}
+> Memory Usage : ${memUsage} MB
+> Node Version : ${nodeVersion}
+> Ready to serve! 🚀`);
   break;
 }
 
