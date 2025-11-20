@@ -759,9 +759,9 @@ case 'help': {
 
 1. *PEMBELIAN TIKET*
 > \`.menu\`
-> \`.order\` [nomor]
-> \`.checkout\` / \`.payment\` / \`.pay\` / \`.bayar\` / \`.pembayaran\`
-> \`.bukti_transfer\` [jumlah] [catatan]
+> \`.order\`
+> \`.payment\` 
+> \`.bukti_tf\` [jumlah] [catatan]
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
 2. *LIHAT RIWAYAT*
@@ -790,9 +790,6 @@ case 'help': {
 
 case 'order': {
   if (isAdmin && !isOwner) return m.reply('❌ Admin tidak bisa order tiket! Hanya user biasa.');
-  if (!text || isNaN(text)) {
-    return m.reply('Format salah!\nGunakan: .order [nomor]\nContoh: .order 1');
-  }
   
   try {
     const firestore = admin.firestore();
@@ -807,14 +804,10 @@ case 'order': {
       konserArray.push({ id: doc.id, ...doc.data() });
     });
 
-    const konserIndex = parseInt(text) - 1;
-    if (konserIndex < 0 || konserIndex >= konserArray.length) {
-      return m.reply(`❌ Nomor konser tidak valid! Gunakan .menu untuk melihat pilihan.`);
-    }
-
-    const konser = konserArray[konserIndex];
-
-    const orderText = `📋 *DETAIL TIKET KONSER*
+    // Jika hanya 1 konser, langsung tampilkan detail
+    if (konserArray.length === 1) {
+      const konser = konserArray[0];
+      const orderText = `📋 *DETAIL TIKET KONSER*
 
 🎤 *${konser.nama}*
 > Event : ${konser.nama}
@@ -824,19 +817,43 @@ case 'order': {
 > Harga : Rp ${konser.harga.toLocaleString('id-ID')}
 > Stok : ${konser.stokTersisa} tiket
 > Info : ${konser.deskripsi}
-┈ׅ──ׄ─꯭─꯭──────꯭ׄ──�� ┈
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
 > Untuk membeli, hubungi admin:
 > ${global.ownerName}
 > wa.me/${global.nomerOwner}
 
-> atau balas .checkout untuk lanjut`;
-    m.reply(orderText);
+> atau balas .payment untuk lanjut`;
+      return m.reply(orderText);
+    }
+
+    // Jika lebih dari 1 konser, tampilkan list
+    let menuText = `🎫 *PILIH KONSER YANG INGIN DIBELI*
+
+> Tersedia ${konserArray.length} konser:
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈\n`;
+
+    konserArray.forEach((konser, index) => {
+      menuText += `\n${index + 1}. *${konser.nama}*
+> Tanggal : ${konser.tanggal}
+> Jam : ${konser.jam}
+> Harga : Rp ${konser.harga.toLocaleString('id-ID')}
+> Stok : ${konser.stokTersisa} tiket
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈`;
+    });
+
+    menuText += `\n*Untuk melihat detail setiap konser:*
+> Balas nomor: 1, 2, 3, dst
+
+> Atau gunakan .menu untuk melihat info lengkap`;
+
+    m.reply(menuText);
   } catch (err) {
     m.reply(`❌ Error: ${err.message}`);
   }
   break;
 }
+
 
 case 'checkout':
 case 'payment':
