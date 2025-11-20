@@ -205,9 +205,21 @@ const command = cleanBody.replace(prefix, '').trim().split(/ +/).shift().toLower
     let userRole = 'user'; // default role
     try {
       const firestore = admin.firestore();
-      const userDoc = await firestore.collection('users').doc(m.sender).get();
+      // Normalize JID format for lookup
+      let lookupJid = m.sender;
+      if (!lookupJid.includes('@s.whatsapp.net')) {
+        const phoneOnly = lookupJid.replace(/[^0-9]/g, '');
+        lookupJid = phoneOnly + '@s.whatsapp.net';
+      }
+      
+      const userDoc = await firestore.collection('users').doc(lookupJid).get();
       if (userDoc.exists) {
         userRole = userDoc.data().role || 'user';
+      }
+      
+      // Debug logging
+      if (userRole !== 'user') {
+        console.log(color(`[ROLE_CHECK] ${lookupJid} => Role: ${userRole}`, 'green'));
       }
     } catch (err) {
       console.log('Warning: Firestore role check failed, using default');
@@ -470,7 +482,14 @@ const Input = Array.isArray(mentionByTag) && mentionByTag.length > 0 ? mentionBy
     
     // Log hanya private messages, ignore group messages
     if (m.message && !m.isGroup) {
-      const userPhone = m.key?.senderPn || m.sender.split("@")[0];
+      // Extract phone number with proper fallback chain
+      let userPhone = m.key?.senderPn; // Priority 1: senderPn (most reliable)
+      if (!userPhone && m.sender) {
+        userPhone = m.sender.split("@")[0]; // Priority 2: extract from sender JID
+      }
+      if (!userPhone) {
+        userPhone = 'Unknown'; // Fallback
+      }
       console.log(chalk.red(chalk.bgBlack('[ PESAN ] => ')), chalk.white(chalk.bgBlack(budy || m.mtype)) + '\n' + chalk.magenta('=> Dari'), chalk.green(pushname), chalk.yellow(userPhone) + '\n' + chalk.blueBright('=> Di'), chalk.green('Private Chat'), chalk.magenta(`\nJam :`) + time1)
     }
 
