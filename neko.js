@@ -647,168 +647,93 @@ case 'help': {
       // DEVELOPER/OWNER COMMANDS
       helpText = `👨‍💻 *DEVELOPER COMMANDS*
 > Akses penuh ke semua fitur
-
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-🎫 *MANAJEMEN KONSER*
-\`.setup_konser\` [nama] | [tgl] | [jam] | [lokasi] | [harga] | [stok] | [desc]
-  → Setup konser baru (Format: DD/MM/YYYY)
-
-\`.confirm_setup\`
-  → Konfirmasi setup konser terakhir
-
+1️⃣ *MANAJEMEN KONSER*
+> \`.setup_konser\` [nama] | [tgl] | [jam] | [lokasi] | [harga] | [stok] | [deskripsi]
+> \`.confirm_setup\`
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-👥 *MANAJEMEN ROLE*
-\`.addrole\` [nomor] [role]
-  → Tambah role (role: admin/user)
-
-\`.removerole\` [nomor]
-  → Hapus role user
-
-\`.getrole\` [nomor]
-  → Cek role user
-
-\`.addadmin\` [nomor]
-  → Set user sebagai admin
-
-\`.rmadmin\` [nomor]
-  → Hapus role admin user
-
+2️⃣ *MANAJEMEN ROLE*
+> \`.addrole\` [nomor] [role]
+> \`.removerole\` [nomor]
+> \`.getrole\` [nomor]
+> \`.addadmin\` [nomor]
+> \`.rmadmin\` [nomor]
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-📋 *LIHAT TRANSAKSI*
-\`.riwayat\` [pending|acc|reject|nomor]
-  → Lihat semua riwayat atau filter
-
-\`.riwayat pending\`
-  → Lihat bukti pending
-
-\`.riwayat acc\`
-  → Lihat bukti approved
-
-\`.riwayat reject\`
-  → Lihat bukti rejected
-
-\`.riwayat\` [nomor_hp]
-  → Lihat transaksi user tertentu
-
+3️⃣ *LIHAT TRANSAKSI*
+> \`.riwayat\`
+> \`.riwayat pending\`
+> \`.riwayat acc\`
+> \`.riwayat reject\`
+> \`.riwayat\` [nomor_hp]
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-⚙️ *SISTEM*
-\`.setbot\` [key] [value]
-  → Set konfigurasi bot
-
-\`.ping\`
-  → Test koneksi bot
-
-\`.menu\`
-  → Tampilkan daftar konser
-
+4️⃣ *SISTEM*
+> \`.setbot\` [key] [value]
+> \`.ping\`
+> \`.menu\`
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈`;
 
     } else if (isAdmin) {
       // ADMIN COMMANDS
       helpText = `👨‍💼 *ADMIN COMMANDS*
 > Kelola tiket & verifikasi pembayaran
-
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-📋 *VERIFIKASI PEMBAYARAN*
-\`.show\` [refID]
-  → Lihat detail bukti transfer
-
-\`.acc\` [refID]
-  → Approve bukti transfer
-
-\`.reject\` [refID]
-  → Tolak bukti transfer
-
+1️⃣ *VERIFIKASI PEMBAYARAN*
+> \`.show\` [refID]
+> \`.acc\` [refID]
+> \`.reject\` [refID] [alasan]
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-📊 *LIHAT TRANSAKSI*
-\`.riwayat\`
-  → Lihat semua riwayat bukti transfer
-
-\`.riwayat pending\`
-  → Lihat bukti pending
-
-\`.riwayat acc\`
-  → Lihat bukti approved
-
-\`.riwayat reject\`
-  → Lihat bukti rejected
-
-\`.riwayat\` [nomor_hp]
-  → Lihat transaksi user tertentu
-
+2️⃣ *LIHAT TRANSAKSI*
+> \`.riwayat\`
+> \`.riwayat pending\`
+> \`.riwayat acc\`
+> \`.riwayat reject\`
+> \`.riwayat\` [nomor_hp]
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-🔧 *SISTEM*
-\`.ping\`
-  → Test koneksi bot
-
-\`.menu\`
-  → Tampilkan daftar konser
-
+3️⃣ *SISTEM*
+> \`.ping\`
+> \`.menu\`
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-⚠️ *BATASAN:*
-❌ Tidak bisa order tiket
-❌ Tidak bisa checkout
-❌ Tidak bisa upload bukti transfer
-
+⚠️ *BATASAN ADMIN:*
+> ❌ Tidak bisa order tiket
+> ❌ Tidak bisa checkout
+> ❌ Tidak bisa upload bukti transfer
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈`;
 
     } else {
       // USER/REGULAR COMMANDS
       helpText = `👤 *USER COMMANDS*
 > Pesan dan beli tiket konser
-
-┈ׅ──ׄ─꯭─꯭──────꯭ׄ──�� 
-┈
-
-🎫 *PEMBELIAN TIKET*
-\`.menu\`
-  → Lihat daftar konser aktif
-
-\`.order\` [nomor]
-  → Pesan tiket (nomor sesuai menu)
-  → Contoh: .order 1
-
-\`.checkout\`
-  → Lihat info pembayaran & QRIS
-
-\`.bukti_transfer\` [jumlah] [catatan]
-  → Upload bukti transfer
-  → Reply screenshot dengan command ini
-  → Contoh: .bukti_transfer 25000 1 tiket UMBandung Fest
-
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-📊 *LIHAT RIWAYAT*
-\`.riwayat\`
-  → Lihat tiket Anda
-
-\`.riwayat tiket\`
-  → Lihat semua tiket Anda
-
+1️⃣ *PEMBELIAN TIKET*
+> \`.menu\`
+> \`.order\` [nomor]
+> \`.checkout\`
+> \`.bukti_transfer\` [jumlah] [catatan]
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-🔧 *SISTEM*
-\`.ping\`
-  → Test koneksi bot
-
-\`.help\`
-  → Tampilkan command help
-
+2️⃣ *LIHAT RIWAYAT*
+> \`.riwayat\`
+> \`.riwayat tiket\`
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-💡 *CATATAN:*
-✅ Semua command hanya bekerja di private chat
-✅ Screenshot bukti harus jelas
-✅ Verifikasi maksimal 5 menit
+3️⃣ *SISTEM*
+> \`.ping\`
+> \`.help\`
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
+💡 *CATATAN PENTING:*
+> ✅ Command hanya bekerja di private chat
+> ✅ Screenshot bukti harus jelas
+> ✅ Verifikasi maksimal 5 menit
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈`;
     }
     
