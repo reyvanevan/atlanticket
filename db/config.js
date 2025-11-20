@@ -4,7 +4,7 @@ const chalk = require('chalk');
 
 // BOT & OWNER INFO
 global.owner = (process.env.OWNER_NUMBERS || '6281224258870').split(',').map(n => n.trim());
-global.nomerOwner = process.env.OWNER_PRIMARY || '6281224258870';
+global.nomerOwner = process.env.OWNER_PRIMARY || '6281224258870G';
 global.nomerBot = process.env.BOT_NUMBER || '6285166328091';
 global.botName = process.env.BOT_NAME || 'Atlana';
 global.ownerName = process.env.OWNER_NAME || 'Reyvan';
@@ -15,6 +15,9 @@ global.namaStore = process.env.STORE_NAME || 'AtlanticGate';
 global.keyorkut = process.env.ORKUT_API_KEY || "753042817460416692404581OKCTDAAF6D7F4FF45EF977E8E23A46FD0165";
 global.merchant = process.env.MERCHANT_ID || "OK2404581";
 global.codeqr = process.env.QRIS_CODE || "00020101021126670016COM.NOBUBANK.WWW01189360050300000879140214130265043333880303UMI51440014ID.CO.QRIS.WWW0215ID20253994953110303UMI5204541153033605802ID5921ZALFA STORE OK24045816007CIANJUR61054321162070703A01630443E7";
+
+// IMAGE HOSTING
+global.imgbbApiKey = process.env.IMGBB_API_KEY || '';
 
 // BOT MESSAGES
 global.bot = process.env.BOT_STATUS_MESSAGE || "ON WOI";

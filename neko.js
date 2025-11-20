@@ -1169,41 +1169,60 @@ Kirim gambar + tuliskan:
     // Download media to temp
     await downloadAndSaveMediaMessage('image', tmpFilePath);
 
-    // Upload ke PixHost
+    // Upload ke ImgBB (lebih reliable dari PixHost)
     let imageUrl = null;
+    let localImageBuffer = null; // Simpan buffer untuk kirim ke admin
+    
     try {
       const FormData = require('form-data');
       const form = new FormData();
-      form.append('img', fs.createReadStream(tmpFilePath));
-      form.append('content_type', '0');
-      form.append('max_th_size', '420');
-
-      const axiosRes = await axios.post('https://api.pixhost.to/images', form, {
-        headers: form.getHeaders()
+      
+      // Read image dan simpan buffer
+      localImageBuffer = fs.readFileSync(tmpFilePath);
+      const base64Image = localImageBuffer.toString('base64');
+      
+      // ImgBB API requires 'image' parameter with base64 data
+      form.append('image', base64Image);
+      
+      const imgbbApiKey = global.imgbbApiKey || process.env.IMGBB_API_KEY;
+      
+      if (!imgbbApiKey || imgbbApiKey === 'YOUR_IMGBB_API_KEY_HERE' || imgbbApiKey === '') {
+        throw new Error('ImgBB API key not configured in .env file');
+      }
+      
+      console.log('📤 Uploading to ImgBB...');
+      const axiosRes = await axios.post(`https://api.imgbb.com/1/upload?key=${imgbbApiKey}`, form, {
+        headers: {
+          ...form.getHeaders()
+        },
+        timeout: 30000,
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity
       });
 
-      const json = axiosRes.data;
-      if (json.show_url) {
-        // Parse URL dari PixHost
-        const match = /\/show\/(\d+)\/(\d+_.+)/.exec(json.show_url);
-        if (match) {
-          const folderId = match[1];
-          const filename = match[2];
-          imageUrl = `https://img1.pixhost.to/images/${folderId}/${filename}`;
-        }
+      console.log('📥 ImgBB Response:', JSON.stringify(axiosRes.data, null, 2));
+
+      if (axiosRes.data && axiosRes.data.success && axiosRes.data.data) {
+        imageUrl = axiosRes.data.data.display_url || axiosRes.data.data.url;
+        console.log('✅ ImgBB upload success:', imageUrl);
+      } else {
+        console.log('⚠️ ImgBB response tidak sesuai:', axiosRes.data);
       }
     } catch (e) {
-      console.log('⚠️ PixHost upload gagal:', e.message);
+      console.log('⚠️ ImgBB upload gagal:', e.message);
+      if (e.response) {
+        console.log('Response status:', e.response.status);
+        console.log('Response data:', JSON.stringify(e.response.data, null, 2));
+      }
       imageUrl = null;
     }
 
-    // Hapus temp file
-    try {
-      fs.unlinkSync(tmpFilePath);
-    } catch (e) {}
-
     if (!imageUrl) {
-      return m.reply('❌ Gagal upload gambar ke server. Coba lagi.');
+      // Hapus temp file jika gagal
+      try {
+        fs.unlinkSync(tmpFilePath);
+      } catch (e) {}
+      return m.reply('❌ Gagal upload gambar ke server. Pastikan API key ImgBB valid.');
     }
 
     // Generate reference ID (13 digit: 1 prefix + 12 digit timestamp)
@@ -1293,7 +1312,7 @@ Silahkan tunggu konfirmasi dari kami.
 ┈ׅ──ۄ─꯭─꯭──────꯭ׄ──ׅ┈
 
 🔗 Link: ${imageUrl}
-​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​
+
 *Untuk melihat bukti & verifikasi:*
 \`.show ${refID}\`
 
@@ -1303,19 +1322,50 @@ Silahkan tunggu konfirmasi dari kami.
 *Untuk reject:*
 \`.reject ${refID} alasan\``;
 
-    // Send to owner dengan gambar
+    // Send to owner dengan bukti transfer (pakai buffer lokal, no download!)
     for (const own of global.owner) {
       try {
-        const imageBuffer = await getBuffer(imageUrl);
-        await client.sendMessage(own + '@s.whatsapp.net', { 
-          image: imageBuffer,
-          caption: adminNotif
-        }, { quoted: m });
-      } catch (imgErr) {
-        // Fallback jika gagal download gambar, kirim text saja
-        console.log('⚠️ Gagal send image ke admin, fallback ke text:', imgErr.message);
-        await client.sendMessage(own + '@s.whatsapp.net', { text: `${adminNotif}\n\n🔗 Link: ${imageUrl}` }, { quoted: m });
+        if (localImageBuffer) {
+          try {
+            // Kirim sebagai document/file langsung dari buffer lokal
+            await client.sendMessage(own + '@s.whatsapp.net', {
+              document: localImageBuffer,
+              fileName: `BuktiTransfer_${refID}.jpg`,
+              mimetype: 'image/jpeg',
+              caption: adminNotif
+            }, { quoted: m });
+            console.log(`✅ Bukti transfer sent as document to admin ${own}`);
+          } catch (sendErr) {
+            console.log('⚠️ Gagal send as document, fallback ke image:', sendErr.message);
+            // Fallback: kirim sebagai image biasa
+            await client.sendMessage(own + '@s.whatsapp.net', { 
+              image: localImageBuffer,
+              caption: adminNotif
+            }, { quoted: m });
+          }
+        } else {
+          // Fallback jika buffer tidak ada (seharusnya tidak terjadi)
+          console.log('⚠️ Buffer tidak ada, kirim link saja');
+          await client.sendMessage(own + '@s.whatsapp.net', { 
+            text: `${adminNotif}\n\n🔗 Link: ${imageUrl}` 
+          }, { quoted: m });
+        }
+      } catch (err) {
+        console.error('Error sending notification to owner:', err.message);
+        // Last resort fallback
+        try {
+          await client.sendMessage(own + '@s.whatsapp.net', { 
+            text: `${adminNotif}\n\n🔗 Link: ${imageUrl}` 
+          }, { quoted: m });
+        } catch (e) {}
       }
+    }
+    
+    // Hapus temp file setelah kirim ke admin
+    try {
+      fs.unlinkSync(tmpFilePath);
+    } catch (e) {
+      console.log('⚠️ Failed to delete temp file:', e.message);
     }
 
   } catch (err) {
@@ -1337,12 +1387,26 @@ case 'lihat_bukti': {
   const data = global.pendingPayments[refID];
   
   try {
-    // Download image dari URL dan kirim ke admin
+    // Download image dari URL dan kirim ke admin (dengan retry logic)
     if (data.mediaPath) {
-      const imageBuffer = await getBuffer(data.mediaPath);
-      await client.sendMessage(m.chat, { 
-        image: imageBuffer,
-        caption: `📸 *BUKTI TRANSFER ${data.refID}*
+      try {
+        let imageBuffer = null;
+        let retries = 2;
+        
+        while (retries > 0) {
+          try {
+            imageBuffer = await getBuffer(data.mediaPath);
+            if (imageBuffer && !imageBuffer.message) break;
+          } catch (err) {
+            retries--;
+            if (retries > 0) await sleep(1000);
+          }
+        }
+        
+        if (imageBuffer && !imageBuffer.message) {
+          await client.sendMessage(m.chat, { 
+            image: imageBuffer,
+            caption: `📸 *BUKTI TRANSFER ${data.refID}*
 
 > Dari : ${data.userName} (${data.userPhone})
 > Jumlah : Rp ${data.jumlah.toLocaleString('id-ID')}
@@ -1353,7 +1417,25 @@ case 'lihat_bukti': {
 🔗 Link: ${data.mediaPath}
 
 *Status: ${data.status.toUpperCase()}*`
-      }, { quoted: m });
+          }, { quoted: m });
+        } else {
+          m.reply(`📸 *BUKTI TRANSFER ${data.refID}*
+
+> Dari : ${data.userName} (${data.userPhone})
+> Jumlah : Rp ${data.jumlah.toLocaleString('id-ID')}
+> Catatan : ${data.catatan}
+> Waktu : ${data.createdAt.toLocaleString('id-ID')}
+┈ׅ──ۄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+🔗 Link: ${data.mediaPath}
+
+*Status: ${data.status.toUpperCase()}*
+
+⚠️ (Gambar tidak bisa dimuat, buka link di atas)`);
+        }
+      } catch (err) {
+        m.reply(`Error: ${err.message}`);
+      }
     }
   } catch (err) {
     m.reply(`❌ Error: ${err.message}`);
@@ -1405,38 +1487,8 @@ case 'approve_bukti': {
       width: 300
     });
 
-    // Upload QR ke PixHost
-    let qrUrl = null;
-    try {
-      const FormData = require('form-data');
-      const form = new FormData();
-      form.append('img', fs.createReadStream(tmpQRPath));
-      form.append('content_type', '0');
-      form.append('max_th_size', '420');
-
-      const axiosRes = await axios.post('https://api.pixhost.to/images', form, {
-        headers: form.getHeaders()
-      });
-
-      const json = axiosRes.data;
-      if (json.show_url) {
-        const match = /\/show\/(\d+)\/(\d+_.+)/.exec(json.show_url);
-        if (match) {
-          const folderId = match[1];
-          const filename = match[2];
-          qrUrl = `https://img1.pixhost.to/images/${folderId}/${filename}`;
-        }
-      }
-    } catch (e) {
-      console.log('⚠️ QR PixHost upload gagal:', e.message);
-    }
-
-    // Hapus temp QR file
-    try {
-      fs.unlinkSync(tmpQRPath);
-    } catch (e) {}
-
-    // Kirim tiket ke user dengan image
+    // Kirim tiket ke user dengan QR code sebagai document (NO EXTERNAL HOSTING)
+    let ticketSentStatus = '❌ GAGAL';
     const ticketMsg = `✅ *PEMBAYARAN DISETUJUI - TIKET DIGENERATE*
 
 > Kode Tiket : ${ticketID}
@@ -1446,24 +1498,36 @@ case 'approve_bukti': {
 > Status : ✅ VALID
 ┈ׅ──˄─꯭─꯭──────꯭ׄ──ׅ┈
 
-🎫 *QR CODE TIKET (SIMPAN BAIK-BAIK)*`;
+🎫 *QR CODE TIKET (SIMPAN BAIK-BAIK)*
+File QR code terlampir di bawah.`;
 
-    // Send QR code image
-    if (qrUrl) {
-      try {
-        const qrBuffer = await getBuffer(qrUrl);
-        await client.sendMessage(userJid, { 
-          image: qrBuffer,
-          caption: ticketMsg
-        });
-      } catch (e) {
-        console.log('Error sending QR image:', e);
-        // Fallback: send text with link
-        await client.sendMessage(userJid, { text: `${ticketMsg}\n\n🔗 Link QR: ${qrUrl}` });
-      }
+    // Send QR code sebagai document/file (paling robust, no external hosting)
+    try {
+      await client.sendMessage(userJid, {
+        document: fs.readFileSync(tmpQRPath),
+        fileName: `Tiket_UMBandungFest_${ticketID}.png`,
+        mimetype: 'image/png',
+        caption: ticketMsg
+      });
+      ticketSentStatus = '✅ QR Code terkirim sebagai file';
+      console.log(`✅ QR code sent as document to ${userJid}`);
+    } catch (e) {
+      console.log('⚠️ Error sending QR as document:', e.message);
+      // Fallback: kirim text dengan wa.me link
+      await client.sendMessage(userJid, { 
+        text: `${ticketMsg}\n\n🔗 Scan link ini untuk verifikasi:\n${qrData}` 
+      });
+      ticketSentStatus = '⚠️ Terkirim dengan link wa.me';
     }
 
-    // Konfirmasi ke admin
+    // Hapus temp QR file setelah kirim
+    try {
+      fs.unlinkSync(tmpQRPath);
+    } catch (e) {
+      console.log('⚠️ Failed to delete temp QR:', e.message);
+    }
+
+    // Konfirmasi ke admin dengan status pengiriman
     m.reply(`✅ *BUKTI TRANSFER DISETUJUI*
 
 > Kode Bukti : ${refID}
@@ -1473,11 +1537,19 @@ case 'approve_bukti': {
 > Status : APPROVED
 ┈ׅ──˄─꯭─꯭──────꯭ׄ──ׅ┈
 
-✅ Tiket sudah dikirim ke user`);
+${ticketSentStatus}`);
 
     // Gunakan nomor HP yang sudah tersimpan di data.userPhone (dari saat bukti dikirim)
     // Jangan re-extract karena bisa jadi corrupted
     const phoneNumber = data.userPhone;
+    
+    // Extract admin phone number yang approve (MOST RELIABLE)
+    let adminPhone = null;
+    if (m.key?.senderPn) {
+      adminPhone = m.key.senderPn.split('@')[0];
+    } else {
+      adminPhone = m.sender.split('@')[0]; // fallback
+    }
     
     // Simpan ke Firestore
     const firestore = admin.firestore();
@@ -1489,12 +1561,12 @@ case 'approve_bukti': {
       buyerPhone: phoneNumber,
       konser: 'UMBandung Fest',
       harga: data.jumlah,
-      qrCode: qrUrl || null,
+      qrCode: null, // QR dikirim sebagai file, tidak perlu URL
       status: 'aktif',
       securityCode: securityCode,
       createdAt: new Date(),
       approvedAt: new Date(),
-      approvedBy: m.sender,
+      approvedBy: adminPhone,
       catatan: data.catatan
     });
 
@@ -1502,9 +1574,9 @@ case 'approve_bukti': {
     await firestore.collection('bukti_transfer').doc(refID).update({
       status: 'approved',
       approvedAt: new Date(),
-      approvedBy: m.sender,
+      approvedBy: adminPhone,
       ticketID: ticketID,
-      qrCode: qrUrl || null
+      qrCode: null // QR dikirim sebagai file
     });
 
     // Update status
@@ -1637,11 +1709,19 @@ _Tiket ini tidak lagi valid!_`);
 _Kode tidak cocok - kemungkinan tiket palsu!_`);
     }
     
+    // Extract admin phone number yang scan (MOST RELIABLE)
+    let scannerPhone = null;
+    if (m.key?.senderPn) {
+      scannerPhone = m.key.senderPn.split('@')[0];
+    } else {
+      scannerPhone = m.sender.split('@')[0]; // fallback
+    }
+    
     // Mark ticket as used
     await firestore.collection('tickets').doc(ticketID).update({
       status: 'used',
       scannedAt: new Date(),
-      scannedBy: m.sender
+      scannedBy: scannerPhone
     });
     
     // Send success reply to admin
