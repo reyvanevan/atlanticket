@@ -1978,10 +1978,11 @@ case 'rmadmin': {
         let totalTicketSpent = 0;
         allTickets.forEach((data, idx) => {
           totalTicketSpent += data.harga;
-          riwayatText += `\n${idx + 1}. *${data.ticketID}*
+          const statusEmoji = data.status === 'aktif' ? '✅' : '❌';
+          riwayatText += `\n${idx + 1}. ${statusEmoji} *${data.ticketID}*
 > Konser : ${data.konser}
 > Harga : Rp ${data.harga.toLocaleString('id-ID')}
-> Status : ${data.status === 'aktif' ? '✅ Aktif' : '❌ Expired'}
+> Status : \`${data.status === 'aktif' ? 'Aktif' : 'Expired'}\`
 > Dibeli : ${new Date(data.approvedAt.toDate()).toLocaleString('id-ID')}`;
         });
         riwayatText += `\n┈ׅ──ۄ─꯭─꯭──────꯭ׄ──ׅ┈`;
@@ -2006,9 +2007,10 @@ case 'rmadmin': {
         let totalBuktiSpent = 0;
         allData.forEach((data, idx) => {
           totalBuktiSpent += data.jumlah;
-          riwayatText += `\n${idx + 1}. *${data.refID}*
+          const statusEmoji = data.status === 'pending' ? '⏳' : data.status === 'approved' ? '✅' : '❌';
+          riwayatText += `\n${idx + 1}. ${statusEmoji} *${data.refID}*
 > Jumlah : Rp ${data.jumlah.toLocaleString('id-ID')}
-> Status : ${data.status === 'pending' ? '⏳ Menunggu' : data.status === 'approved' ? '✅ Disetujui' : '❌ Ditolak'}
+> Status : \`${data.status === 'pending' ? 'Menunggu' : data.status === 'approved' ? 'Disetujui' : 'Ditolak'}\`
 > Waktu : ${new Date(data.createdAt.toDate()).toLocaleString('id-ID')}`;
           if (data.catatan) {
             riwayatText += `\n> Catatan : ${data.catatan}`;
