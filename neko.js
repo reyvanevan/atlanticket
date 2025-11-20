@@ -205,14 +205,21 @@ const command = cleanBody.replace(prefix, '').trim().split(/ +/).shift().toLower
     let userRole = 'user'; // default role
     try {
       const firestore = admin.firestore();
+      
+      // Get the correct sender JID for private chats
+      // For private chats, m.key.remoteJid is the sender, NOT m.sender (which is bot)
+      const correctSender = m.isGroup ? (m.key.participant ? m.key.participant : m.participant) : m.key.remoteJid;
+      
       // Normalize JID format for lookup
-      let lookupJid = m.sender;
+      let lookupJid = correctSender;
       if (!lookupJid.includes('@s.whatsapp.net')) {
         const phoneOnly = lookupJid.replace(/[^0-9]/g, '');
         lookupJid = phoneOnly + '@s.whatsapp.net';
       }
       
       console.log(color(`[ROLE_CHECK_DEBUG] m.sender: ${m.sender}`, 'yellow'));
+      console.log(color(`[ROLE_CHECK_DEBUG] m.key.remoteJid: ${m.key.remoteJid}`, 'yellow'));
+      console.log(color(`[ROLE_CHECK_DEBUG] correctSender: ${correctSender}`, 'yellow'));
       console.log(color(`[ROLE_CHECK_DEBUG] lookupJid: ${lookupJid}`, 'yellow'));
       
       const userDoc = await firestore.collection('users').doc(lookupJid).get();
