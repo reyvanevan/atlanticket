@@ -838,9 +838,9 @@ case 'order': {
 > Stok : ${konser.stokTersisa} tiket
 > Info : ${konser.deskripsi}
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
-${adminInfo}
 
-> atau balas .payment untuk lanjut`;
+📸 *UNTUK ORDER:*
+> Balas .payment untuk lanjut${adminInfo}`;
       return m.reply(orderText);
     }
 
