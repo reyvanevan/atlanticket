@@ -249,6 +249,9 @@ const command = cleanBody.replace(prefix, '').trim().split(/ +/).shift().toLower
       const userDoc = await firestore.collection('users').doc(lookupJid).get();
       if (userDoc.exists) {
         userRole = userDoc.data().role || 'user';
+        console.log(color(`✅ [ROLE_CHECK] ${lookupJid} => ${userRole}`, 'green'));
+      } else {
+        console.log(color(`⚠️ [ROLE_CHECK] ${lookupJid} => NOT_FOUND (default: user)`, 'yellow'));
       }
     } catch (err) {
       console.log(color(`[ROLE_CHECK_ERROR] ${err.message}`, 'red'));
@@ -256,6 +259,8 @@ const command = cleanBody.replace(prefix, '').trim().split(/ +/).shift().toLower
     
     const isAdmin = userRole === 'admin' || isOwner; // Admin + Owner
     const isDeveloper = isOwner; // Only Owner (Developer)
+    
+    console.log(color(`🔐 [AUTH] Sender: ${m.sender.split('@')[0]} | Role: ${userRole} | isAdmin: ${isAdmin} | isOwner: ${isOwner}`, 'cyan'));
     
     const sender = m.isGroup ? (m.key.participant ? m.key.participant : m.participant) : m.key.remoteJid
     
@@ -1489,6 +1494,8 @@ case 'lihat_bukti': {
 
 case 'acc':
 case 'approve_bukti': {
+  console.log(color(`🔍 [ACC_DEBUG] Command received from: ${m.sender} | isAdmin: ${isAdmin} | userRole: ${userRole}`, 'magenta'));
+  
   if (!isAdmin) return m.reply('❌ Hanya admin/owner yang bisa!');
   
   const refID = text;
