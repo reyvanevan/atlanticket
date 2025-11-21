@@ -80,6 +80,7 @@ const fsx = require('fs-extra')
 const crypto = require('crypto')
 const moment = require('moment-timezone')
 const { color, bgcolor } = require('./lib/color')
+const { createCanvas, loadImage } = require('canvas')
 
 const { exec, spawn, execSync } = require("child_process")
 const { smsg, tanggal, getTime, isUrl, sleep, clockString, runtime, fetchJson, getBuffer, jsonformat, format, parseMention, getRandom, getGroupAdmins, generateUniqueRefID, connect } = require('./lib/myfunc')
