@@ -425,6 +425,73 @@ async function generateInvoiceWithBackground(data, backgroundPath, logoPath = nu
   return outputPath;
 }
 
+// Generate ticket dengan QR overlay ke template poster
+async function generateTicketWithQR(ticketData, qrCodePath, templatePath) {
+  try {
+    // Load template image
+    const template = await loadImage(templatePath);
+    const canvas = createCanvas(template.width, template.height);
+    const ctx = canvas.getContext("2d");
+    
+    // Draw template background
+    ctx.drawImage(template, 0, 0, canvas.width, canvas.height);
+    
+    // Load QR code image
+    if (fs.existsSync(qrCodePath)) {
+      const qrImage = await loadImage(qrCodePath);
+      
+      // Calculate QR position (centered)
+      const qrSize = Math.min(canvas.width, canvas.height) * 0.35; // QR size 35% of canvas
+      const qrX = (canvas.width - qrSize) / 2;
+      const qrY = (canvas.height - qrSize) / 2 + 50; // Sedikit ke bawah dari center
+      
+      // Draw white background for QR (padding)
+      const padding = 20;
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillRect(qrX - padding, qrY - padding, qrSize + (padding * 2), qrSize + (padding * 2));
+      
+      // Draw QR code
+      ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize);
+    }
+    
+    // Add ticket info text
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "bold 24px Arial";
+    ctx.textAlign = "center";
+    ctx.shadowColor = "rgba(0, 0, 0, 0.8)";
+    ctx.shadowBlur = 10;
+    ctx.shadowOffsetX = 2;
+    ctx.shadowOffsetY = 2;
+    
+    // Ticket ID at top
+    ctx.fillText(`TICKET ID: ${ticketData.ticketID}`, canvas.width / 2, 80);
+    
+    // Buyer name and info at bottom
+    ctx.font = "bold 20px Arial";
+    ctx.fillText(ticketData.buyerName, canvas.width / 2, canvas.height - 120);
+    
+    ctx.font = "18px Arial";
+    ctx.fillText(`${ticketData.konser}`, canvas.width / 2, canvas.height - 90);
+    ctx.fillText(`Rp ${ticketData.harga.toLocaleString('id-ID')}`, canvas.width / 2, canvas.height - 60);
+    
+    // Save to file
+    const outputDir = path.join(__dirname, "db/tickets/");
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
+    }
+    
+    const outputPath = path.join(outputDir, `Ticket_${ticketData.ticketID}.png`);
+    const buffer = canvas.toBuffer("image/png");
+    fs.writeFileSync(outputPath, buffer);
+    
+    console.log(`✅ Ticket image generated: ${outputPath}`);
+    return outputPath;
+  } catch (error) {
+    console.error('❌ Error generating ticket:', error.message);
+    throw error;
+  }
+}
+
 
     
      async function downloadAndSaveMediaMessage (type_file, path_file) {
@@ -655,7 +722,7 @@ case 'menu': {
       return m.reply('❌ Belum ada konser yang tersedia. Hubungi admin!');
     }
 
-    let menuText = `🎫 *TIKET KONSER UMBANDUNG* 🎫
+    let menuText = `🎫 *TIKET KONSER UMBANDUNG FEST* 🎫
 
 > Pilih konser yang ingin Anda beli:
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈\n`;
@@ -1507,7 +1574,26 @@ case 'approve_bukti': {
       width: 300
     });
 
-    // Kirim tiket ke user dengan QR code sebagai document (NO EXTERNAL HOSTING)
+    // Generate ticket image dengan QR overlay ke template poster
+    const templatePath = path.join(__dirname, 'assets/ticket_template.png');
+    let finalTicketPath = null;
+    
+    try {
+      finalTicketPath = await generateTicketWithQR({
+        ticketID: ticketID,
+        buyerName: data.userName,
+        konser: 'UMBandung Fest',
+        harga: data.jumlah
+      }, tmpQRPath, templatePath);
+      
+      console.log('✅ Final ticket with QR overlay generated');
+    } catch (err) {
+      console.error('⚠️ Error generating ticket with template:', err.message);
+      // Fallback: use plain QR
+      finalTicketPath = tmpQRPath;
+    }
+
+    // Kirim tiket ke user dengan gambar final
     let ticketSentStatus = '❌ GAGAL';
     const ticketMsg = `✅ *PEMBAYARAN DISETUJUI - TIKET DIGENERATE*
 
@@ -1518,19 +1604,19 @@ case 'approve_bukti': {
 > Status : ✅ VALID
 ┈ׅ──˄─꯭─꯭──────꯭ׄ──ׅ┈
 
-🎫 *QR CODE TIKET (SIMPAN BAIK-BAIK)*
-Gambar QR code terlampir di bawah.`;
+🎫 *E-TICKET (SIMPAN BAIK-BAIK)*
+Tunjukkan tiket ini saat masuk venue.`;
 
-    // Send QR code sebagai image (lebih cepat & reliable)
+    // Send ticket image
     try {
       await client.sendMessage(userJid, {
-        image: fs.readFileSync(tmpQRPath),
+        image: fs.readFileSync(finalTicketPath),
         caption: ticketMsg
       });
-      ticketSentStatus = '✅ QR Code terkirim';
-      console.log(`✅ QR code sent as image to ${userJid}`);
+      ticketSentStatus = '✅ E-Ticket terkirim';
+      console.log(`✅ Ticket sent as image to ${userJid}`);
     } catch (e) {
-      console.log('⚠️ Error sending QR as image:', e.message);
+      console.log('⚠️ Error sending ticket as image:', e.message);
       // Fallback: kirim text dengan wa.me link
       await client.sendMessage(userJid, { 
         text: `${ticketMsg}\n\n🔗 Scan link ini untuk verifikasi:\n${qrData}` 
@@ -1538,7 +1624,7 @@ Gambar QR code terlampir di bawah.`;
       ticketSentStatus = '⚠️ Terkirim dengan link wa.me';
     }
 
-    // Hapus temp QR file setelah kirim
+    // Hapus temp files setelah kirim
     try {
       fs.unlinkSync(tmpQRPath);
     } catch (e) {
@@ -1916,7 +2002,7 @@ case 'addrole': {
     // Send notification to target user
     const notifMsg = `👨‍💼 *NOTIFIKASI AKSES ADMIN*
 
-Anda telah ditambahkan sebagai admin di UMBandungFest Bot!
+Anda telah ditambahkan sebagai admin di Atlanticket Bot!
 
 > Role : ${role.toUpperCase()}
 > Disetujui oleh : ${m.pushName || 'Owner'}
@@ -2040,7 +2126,7 @@ case 'addadmin': {
     // Send notification to target user
     const notifMsg = `👨‍💼 *SELAMAT! ANDA ADMIN*
 
-Anda telah ditambahkan sebagai admin di UMBandungFest Bot!
+Anda telah ditambahkan sebagai admin di AtlanTicket Bot!
 
 > Role : ADMIN
 > Disetujui oleh : ${m.pushName || 'Owner'}
