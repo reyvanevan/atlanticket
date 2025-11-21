@@ -442,9 +442,9 @@ async function generateTicketWithQR(ticketData, qrCodePath, templatePath) {
       const qrImage = await loadImage(qrCodePath);
       
       // Position QR di panel merah (kanan)
-      // Asumsi panel merah mulai dari 60% lebar canvas
-      const panelStartX = canvas.width * 0.6; // Panel merah mulai dari 60% lebar
-      const panelWidth = canvas.width * 0.4; // Lebar panel 40%
+      // Panel merah mulai dari 73% lebar canvas
+      const panelStartX = canvas.width * 0.73; // Panel merah mulai dari 73% lebar
+      const panelWidth = canvas.width * 0.27; // Lebar panel 27%
       
       // QR size disesuaikan dengan panel merah (lebih kecil)
       const qrSize = Math.min(panelWidth * 0.7, canvas.height * 0.4); // 70% dari panel width
@@ -461,7 +461,7 @@ async function generateTicketWithQR(ticketData, qrCodePath, templatePath) {
     }
     
     // Add ticket info text - semua di panel merah
-    const panelCenterX = canvas.width * 0.8; // Center dari panel merah (80% dari total width)
+    const panelCenterX = canvas.width * 0.865; // Center dari panel merah (86.5% dari total width)
     
     ctx.fillStyle = "#FFFFFF";
     ctx.font = "bold 20px Arial";
