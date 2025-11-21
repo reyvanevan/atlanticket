@@ -442,50 +442,33 @@ async function generateTicketWithQR(ticketData, qrCodePath, templatePath) {
       const qrImage = await loadImage(qrCodePath);
       
       // Position QR di panel merah (kanan)
-      // Panel merah mulai dari 73% lebar canvas
-      const panelStartX = canvas.width * 0.73; // Panel merah mulai dari 73% lebar
-      const panelWidth = canvas.width * 0.27; // Lebar panel 27%
+      // Panel merah mulai dari 70% lebar canvas
+      const panelStartX = canvas.width * 0.7; // Panel merah mulai dari 70% lebar
+      const panelWidth = canvas.width * 0.3; // Lebar panel 30%
       
-      // QR size disesuaikan dengan panel merah (lebih kecil)
-      const qrSize = Math.min(panelWidth * 0.7, canvas.height * 0.4); // 70% dari panel width
+      // QR size diperbesar (tanpa white padding)
+      const qrSize = Math.min(panelWidth * 0.85, canvas.height * 0.55); // 85% dari panel width
       const qrX = panelStartX + (panelWidth - qrSize) / 2; // Center dalam panel merah
-      const qrY = canvas.height * 0.35; // Posisi vertikal 35% dari atas
+      const qrY = canvas.height * 0.20; // Posisi vertikal 20% dari atas
       
-      // Draw white background for QR (padding)
-      const padding = 15;
-      ctx.fillStyle = "#FFFFFF";
-      ctx.fillRect(qrX - padding, qrY - padding, qrSize + (padding * 2), qrSize + (padding * 2));
-      
-      // Draw QR code
+      // Draw QR code (no white padding)
       ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize);
     }
     
-    // Add ticket info text - semua di panel merah
-    const panelCenterX = canvas.width * 0.865; // Center dari panel merah (86.5% dari total width)
+    // Add ticket info text - hanya TICKET ID di bawah QR
+    const panelCenterX = canvas.width * 0.85; // Center dari panel merah (85% dari total width)
     
-    ctx.fillStyle = "#FFFFFF";
-    ctx.font = "bold 20px Arial";
-    ctx.textAlign = "center";
-    ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
-    ctx.shadowBlur = 5;
-    ctx.shadowOffsetX = 1;
-    ctx.shadowOffsetY = 1;
-    
-    // Ticket ID di atas QR
-    ctx.fillText(`TICKET ID`, panelCenterX, canvas.height * 0.15);
-    ctx.font = "bold 16px Arial";
-    ctx.fillText(ticketData.ticketID, panelCenterX, canvas.height * 0.20);
-    
-    // Buyer name dan info di bawah QR
+    ctx.fillStyle = "#000000"; // Black color
     ctx.font = "bold 18px Arial";
-    const qrBottomY = canvas.height * 0.35 + (canvas.height * 0.4 * 0.7); // Posisi bawah QR
-    ctx.fillText(ticketData.buyerName, panelCenterX, qrBottomY + 40);
+    ctx.textAlign = "center";
+    ctx.shadowColor = "transparent";
+    ctx.shadowBlur = 0;
     
+    // Ticket ID di bawah QR
+    const qrBottomY = canvas.height * 0.20 + (canvas.height * 0.55 * 0.85); // Posisi bawah QR
+    ctx.fillText(`TICKET ID`, panelCenterX, qrBottomY + 30);
     ctx.font = "16px Arial";
-    ctx.fillText(ticketData.konser, panelCenterX, qrBottomY + 65);
-    
-    ctx.font = "bold 16px Arial";
-    ctx.fillText(`Rp ${ticketData.harga.toLocaleString('id-ID')}`, panelCenterX, qrBottomY + 90);
+    ctx.fillText(ticketData.ticketID, panelCenterX, qrBottomY + 55);
     
     // Save to file
     const outputDir = path.join(__dirname, "db/tickets/");
