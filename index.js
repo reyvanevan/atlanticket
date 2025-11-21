@@ -5,7 +5,9 @@ if (!global.crypto) {
 }
 
 require('./db/config')
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, generateForwardMessageContent, prepareWAMessageMedia, generateWAMessageFromContent, generateMessageID, downloadContentFromMessage, /*makeInMemoryStore,*/ jidDecode, getAggregateVotesInPollMessage, proto } = require("@whiskeysockets/baileys")
+// Dynamic import untuk Baileys (ESM module)
+let makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, generateForwardMessageContent, prepareWAMessageMedia, generateWAMessageFromContent, generateMessageID, downloadContentFromMessage, jidDecode, getAggregateVotesInPollMessage, proto;
+
 const fs = require('fs')
 const pino = require('pino')
 const chalk = require('chalk')
@@ -97,6 +99,23 @@ CFonts.say(
 console.log(color(`INFO:`, "gold"), color(`\n-`, "gold"), color(`Jika code tidak muncul enter 1-2x lagi`, "red"), color(`\n-`, "gold"), color(`Format nomor diawali dengan 62..., bukan 08...`, "red"))
 //=================================================//
 async function connectToWhatsApp() {
+// Load Baileys dengan dynamic import
+if (!makeWASocket) {
+  const baileys = await import("@whiskeysockets/baileys");
+  makeWASocket = baileys.default;
+  useMultiFileAuthState = baileys.useMultiFileAuthState;
+  DisconnectReason = baileys.DisconnectReason;
+  fetchLatestBaileysVersion = baileys.fetchLatestBaileysVersion;
+  generateForwardMessageContent = baileys.generateForwardMessageContent;
+  prepareWAMessageMedia = baileys.prepareWAMessageMedia;
+  generateWAMessageFromContent = baileys.generateWAMessageFromContent;
+  generateMessageID = baileys.generateMessageID;
+  downloadContentFromMessage = baileys.downloadContentFromMessage;
+  jidDecode = baileys.jidDecode;
+  getAggregateVotesInPollMessage = baileys.getAggregateVotesInPollMessage;
+  proto = baileys.proto;
+}
+
 const { state, saveCreds } = await useMultiFileAuthState(global.sessionName)
 
 const { version } = await fetchLatestBaileysVersion();

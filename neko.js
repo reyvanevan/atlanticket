@@ -3,7 +3,28 @@ let autoGetLayanan = false;
 let intervalId;
 let antilinkEnabled = false;
 
-const { BufferJSON, WA_DEFAULT_EPHEMERAL, makeWASocket, useMultiFileAuthState, getAggregateVotesInPollMessage, generateWAMessageFromContent, proto, generateWAMessageContent, generateWAMessage, prepareWAMessageMedia, downloadContentFromMessage, areJidsSameUser, getContentType, jidDecode } = require("@whiskeysockets/baileys")
+// Dynamic import untuk Baileys
+let BufferJSON, WA_DEFAULT_EPHEMERAL, makeWASocket, useMultiFileAuthState, getAggregateVotesInPollMessage, generateWAMessageFromContent, proto, generateWAMessageContent, generateWAMessage, prepareWAMessageMedia, downloadContentFromMessage, areJidsSameUser, getContentType, jidDecode;
+
+// Load Baileys functions
+const initBaileys = (async () => {
+  const baileys = await import("@whiskeysockets/baileys");
+  BufferJSON = baileys.BufferJSON;
+  WA_DEFAULT_EPHEMERAL = baileys.WA_DEFAULT_EPHEMERAL;
+  makeWASocket = baileys.makeWASocket;
+  useMultiFileAuthState = baileys.useMultiFileAuthState;
+  getAggregateVotesInPollMessage = baileys.getAggregateVotesInPollMessage;
+  generateWAMessageFromContent = baileys.generateWAMessageFromContent;
+  proto = baileys.proto;
+  generateWAMessageContent = baileys.generateWAMessageContent;
+  generateWAMessage = baileys.generateWAMessage;
+  prepareWAMessageMedia = baileys.prepareWAMessageMedia;
+  downloadContentFromMessage = baileys.downloadContentFromMessage;
+  areJidsSameUser = baileys.areJidsSameUser;
+  getContentType = baileys.getContentType;
+  jidDecode = baileys.jidDecode;
+})();
+
 const fs = require('fs')
 const pino = require('pino')
 const pushname = m.pushName || "No Name"
@@ -91,6 +112,9 @@ const { smsg, tanggal, getTime, isUrl, sleep, clockString, runtime, fetchJson, g
 
 module.exports = client = async (client, m, chatUpdate, store, db_respon_list) => {
   try {
+      // Tunggu Baileys load dulu
+      await initBaileys;
+      
       // Parsing normal message types
       const chath = (m.mtype === 'conversation' && m.message.conversation) ? m.message.conversation 
       : (m.mtype == 'imageMessage') && m.message.imageMessage.caption ? m.message.imageMessage.caption 

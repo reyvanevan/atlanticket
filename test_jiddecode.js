@@ -1,5 +1,3 @@
-const { jidDecode } = require("@whiskeysockets/baileys");
-
 // Test berbagai format JID
 const testJids = [
   '161447921340608@lid',
@@ -9,13 +7,17 @@ const testJids = [
   '0289653544913@s.whatsapp.net'
 ];
 
-testJids.forEach(jid => {
-  try {
-    const decoded = jidDecode(jid);
-    console.log(`\n✓ JID: ${jid}`);
-    console.log(`  Decoded:`, JSON.stringify(decoded, null, 2));
-  } catch (e) {
-    console.log(`\n✗ JID: ${jid}`);
-    console.log(`  Error: ${e.message}`);
-  }
-});
+(async () => {
+  const { jidDecode } = await import("@whiskeysockets/baileys");
+  
+  testJids.forEach(jid => {
+    try {
+      const decoded = jidDecode(jid);
+      console.log(`\n✓ JID: ${jid}`);
+      console.log(`  Decoded:`, JSON.stringify(decoded, null, 2));
+    } catch (e) {
+      console.log(`\n✗ JID: ${jid}`);
+      console.log(`  Error: ${e.message}`);
+    }
+  });
+})();
