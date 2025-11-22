@@ -66,6 +66,12 @@ const { createCanvas, loadImage } = require('canvas')
 const { exec, spawn, execSync } = require("child_process")
 const { smsg, tanggal, getTime, isUrl, sleep, clockString, runtime, fetchJson, getBuffer, jsonformat, format, parseMention, getRandom, getGroupAdmins, generateUniqueRefID, connect } = require('./lib/myfunc')
 
+// ========== LOCAL STORAGE MANAGERS ==========
+const storage = require('./lib/storage')
+const ticketManager = require('./lib/ticketManager')
+const buktiTransferManager = require('./lib/buktiTransferManager')
+const concertManager = require('./lib/concertManager')
+
 //const mlbbHelpers = require('./lib/mlbb-helpers');
 // Kemudian gunakan fungsi-fungsinya
 //const { getMLBBAccount, updateMLBBAccountStatus, findAvailableAccount } = mlbbHelpers;
@@ -1691,9 +1697,8 @@ ${ticketSentStatus}`);
       adminPhone = m.sender.split('@')[0]; // fallback
     }
     
-    // Simpan ke Firestore
-    const firestore = admin.firestore();
-    await firestore.collection('tickets').doc(ticketID).set({
+    // Create ticket using local storage manager
+    const ticketData = {
       ticketID: ticketID,
       refID: refID,
       buyerJid: userJid,
@@ -1701,41 +1706,22 @@ ${ticketSentStatus}`);
       buyerPhone: phoneNumber,
       konser: 'UMBandung Fest',
       harga: data.jumlah,
-      qrCode: null, // QR dikirim sebagai file, tidak perlu URL
       status: 'aktif',
       securityCode: securityCode,
-      createdAt: new Date(),
-      approvedAt: new Date(),
       approvedBy: adminPhone,
       catatan: data.catatan
-    });
-
-    // Update status di Firestore bukti_transfer
-    await firestore.collection('bukti_transfer').doc(refID).update({
-      status: 'approved',
-      approvedAt: new Date(),
-      approvedBy: adminPhone,
-      ticketID: ticketID,
-      qrCode: null // QR dikirim sebagai file
-    });
+    };
+    ticketManager.create(ticketData);
     
-    // **DECREASE STOK** in concerts collection
-    // Find the active concert first (usually UMBandung Fest)
-    const konserQuery = await firestore.collection('concerts')
-      .where('status', '==', 'aktif')
-      .limit(1)
-      .get();
+    // Update bukti_transfer status using manager
+    buktiTransferManager.updateStatus(refID, 'approved', adminPhone, ticketID);
     
-    if (!konserQuery.empty) {
-      const konserDoc = konserQuery.docs[0];
-      const currentStok = konserDoc.data().stok || 0;
-      
-      if (currentStok > 0) {
-        await konserDoc.ref.update({
-          stok: currentStok - 1,
-          updatedAt: new Date()
-        });
-        console.log(`📉 Stok berkurang: ${currentStok} → ${currentStok - 1}`);
+    // Decrease stock in concerts using manager
+    const activeKonser = concertManager.getActive();
+    if (activeKonser) {
+      const decreaseSuccess = concertManager.decreaseStock(activeKonser.konserID, 1);
+      if (decreaseSuccess) {
+        console.log(`📉 Stok berkurang untuk konser ${activeKonser.nama}`);
       } else {
         console.warn('⚠️ Stok sudah habis!');
         m.reply('⚠️ Warning: Stok tiket habis!');
@@ -1903,18 +1889,16 @@ case 'scan': {
       return m.reply('Format: .scan [ticketID] [securityCode]');
     }
     
-    const firestore = admin.firestore();
-    const ticketDoc = await firestore.collection('tickets').doc(ticketID).get();
+    // Use local storage manager instead of Firestore
+    const ticketData = ticketManager.findById(ticketID);
     
-    if (!ticketDoc.exists) {
+    if (!ticketData) {
       return m.reply(`❌ *TIKET TIDAK DITEMUKAN*
 
 > ID : ${ticketID}
 
 _Tiket tidak terdaftar di sistem!_`);
     }
-    
-    const ticketData = ticketDoc.data();
     
     // Check if ticket already used
     if (ticketData.status === 'used') {
@@ -1923,7 +1907,7 @@ _Tiket tidak terdaftar di sistem!_`);
 > ID : ${ticketID}
 > Pembeli : ${ticketData.buyerName} (${ticketData.buyerPhone})
 > Konser : ${ticketData.konser}
-> Scan Waktu : ${moment(ticketData.scannedAt.toDate()).tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss')} WIB
+> Scan Waktu : ${moment(ticketData.scannedAt).tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss')} WIB
 
 _Tiket sudah digunakan - kemungkinan duplikat!_`);
     }
@@ -1958,12 +1942,8 @@ _Kode tidak cocok - kemungkinan tiket palsu!_`);
       scannerPhone = m.sender.split('@')[0]; // fallback
     }
     
-    // Mark ticket as used
-    await firestore.collection('tickets').doc(ticketID).update({
-      status: 'used',
-      scannedAt: new Date(),
-      scannedBy: scannerPhone
-    });
+    // Mark ticket as used using manager
+    ticketManager.updateStatus(ticketID, 'used', scannerPhone);
     
     // Send success reply to admin
     const successMsg = `✅ *TIKET VALID - BOLEH MASUK*
@@ -2216,34 +2196,26 @@ case 'stok': {
   if (!isAdmin) return m.reply('❌ Hanya admin/owner yang bisa melihat stok!');
   
   try {
-    const firestore = admin.firestore();
-    
-    // Get all tickets
-    const ticketsSnapshot = await firestore.collection('tickets').get();
+    // Get all tickets from local storage
+    const allTickets = ticketManager.getAll();
     
     // Get the active concert to get stock data
-    const konserQuery = await firestore.collection('concerts')
-      .where('status', '==', 'aktif')
-      .limit(1)
-      .get();
+    const activeKonser = concertManager.getActive();
     
-    if (konserQuery.empty) {
+    if (!activeKonser) {
       return m.reply('❌ Tidak ada konser aktif! Silahkan setup konser terlebih dahulu.');
     }
     
-    const konserData = konserQuery.docs[0].data();
-    const totalStokAwal = konserData.stokAwal || 0;  // Reference awal (tidak berubah)
-    const sisaStok = konserData.stok || 0;           // Current remaining
+    const totalStokAwal = activeKonser.stokAwal || 0;  // Reference awal (tidak berubah)
+    const sisaStok = activeKonser.stok || 0;           // Current remaining
     
-    let totalTerjual = ticketsSnapshot.size;
+    let totalTerjual = allTickets.length;
     let totalDiScan = 0;
     let totalBelumDiScan = 0;
     let perKonserData = {};
     
     // Parse semua tiket
-    ticketsSnapshot.forEach(doc => {
-      const ticket = doc.data();
-      
+    allTickets.forEach(ticket => {
       if (ticket.status === 'used') {
         totalDiScan++;
       } else if (ticket.status === 'aktif') {
@@ -2268,18 +2240,15 @@ case 'stok': {
     });
     
     // Get pending & approved payments untuk lihat stok yang akan datang
-    const buktiSnapshot = await firestore.collection('bukti_transfer')
-      .where('status', 'in', ['pending', 'approved'])
-      .get();
-    
-    let pendingTiket = buktiSnapshot.size;
+    const allBukti = buktiTransferManager.getAll();
+    let pendingTiket = allBukti.filter(b => b.status === 'pending' || b.status === 'approved').length;
     
     // Calculate percentages
     const persentaseTerjual = totalStokAwal > 0 ? ((totalTerjual / totalStokAwal) * 100).toFixed(1) : 0;
     const persentaseSisa = totalStokAwal > 0 ? ((sisaStok / totalStokAwal) * 100).toFixed(1) : 0;
     
     // Build response text
-    let stokText = `📊 *STOK TIKET UMBandung Fest*
+    let stokText = `📊 *STOK TIKET ${activeKonser.nama.toUpperCase()}*
 
 *STATUS KESELURUHAN:*
 > Total Stok Awal : ${totalStokAwal} tiket
