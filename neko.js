@@ -2133,24 +2133,19 @@ case 'stok': {
     // Get all tickets
     const ticketsSnapshot = await firestore.collection('tickets').get();
     
-    // Get the active concert to get remaining stock
+    // Get the active concert to get stock data
     const konserQuery = await firestore.collection('concerts')
       .where('status', '==', 'aktif')
       .limit(1)
       .get();
     
-    let totalStokAwal = 0;
-    let sisaStok = 0;
-    
-    if (!konserQuery.empty) {
-      const konserData = konserQuery.docs[0].data();
-      sisaStok = konserData.stok || 0;
-      const stokAwal = konserData.stokAwal || 0;
-      totalStokAwal = stokAwal > 0 ? stokAwal : (ticketsSnapshot.size + sisaStok);
-    } else {
-      // Fallback: calculate from tickets
-      totalStokAwal = ticketsSnapshot.size;
+    if (konserQuery.empty) {
+      return m.reply('❌ Tidak ada konser aktif! Silahkan setup konser terlebih dahulu.');
     }
+    
+    const konserData = konserQuery.docs[0].data();
+    const totalStokAwal = konserData.stokAwal || 0;  // Reference awal (tidak berubah)
+    const sisaStok = konserData.stok || 0;           // Current remaining
     
     let totalTerjual = ticketsSnapshot.size;
     let totalDiScan = 0;
