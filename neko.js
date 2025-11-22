@@ -805,94 +805,113 @@ case 'help': {
 > Akses penuh ke semua fitur
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-1. *MANAJEMEN KONSER*
-> \`.setup_konser\` [nama] | [tgl] | [jam] | [lokasi] | [harga] | [stok] | [deskripsi]
-> \`.confirm_setup\`
+1. *🎤 MANAJEMEN KONSER (Local Storage)*
+> \`.setup_konser\` [nama]|[tgl]|[jam]|[lokasi]|[harga]|[stok]|[deskripsi]
+> \`.confirm_setup\` - Simpan konser ke db/concerts.json
+> \`.menu\` - Lihat konser aktif
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-2. *MANAJEMEN ADMIN (LOCAL)*
-> \`.addadmin\` [nomor] - Tambah admin (simpan ke db/admin.json)
+2. 👨‍💼 *MANAJEMEN ADMIN (Local Storage)*
+> \`.addadmin\` [nomor] - Tambah admin → db/admin.json
 > \`.rmadmin\` [nomor] - Hapus admin dari list
 > \`.listusers\` - Lihat semua owner & admin
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-3. *LIHAT TRANSAKSI*
-> \`.riwayat\`
-> \`.riwayat pending\`
-> \`.riwayat acc\`
-> \`.riwayat reject\`
-> \`.riwayat\` [nomor_hp]
+3. 🎫 *MANAJEMEN TIKET (Local Storage)*
+> \`.acc\` [refID] - Approve pembayaran & generate tiket
+> \`.reject\` [refID] [alasan] - Tolak pembayaran
+> \`.scan\` [ticketID] [code] - Scan tiket masuk
+> \`.stok\` - Lihat stok tiket & analytics
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-4. *STOK & ANALYTICS*
-> \`.stok\` - Lihat stok tiket & penjualan
+4. 💰 *MANAJEMEN PEMBAYARAN (Local Storage)*
+> \`.show\` [refID] - Lihat detail pembayaran
+> \`.riwayat\` - Lihat semua transaksi
+> \`.riwayat pending\` - Lihat pending
+> \`.riwayat acc\` - Lihat approved
+> \`.riwayat reject\` - Lihat rejected
+> \`.riwayat\` [nomor_hp] - Lihat user tertentu
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-5. *SISTEM*
-> \`.setbot\` [key] [value]
-> \`.ping\`
-> \`.menu\`
+5. ⚙️ *SISTEM*
+> \`.ping\` - Cek status bot
+> \`.setbot\` [key] [value] - Setting grup
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+📌 *LOCAL STORAGE FILES:*
+> db/concerts.json - Data konser
+> db/tickets.json - Data tiket
+> db/bukti_transfer.json - Data pembayaran
+> db/admin.json - Daftar admin
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈`;
 
     } else if (isAdmin) {
       // ADMIN COMMANDS
       helpText = `👨‍💼 *ADMIN COMMANDS*
-> Kelola tiket & verifikasi pembayaran
+> Kelola tiket & verifikasi pembayaran (dari local storage)
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-1. *VERIFIKASI PEMBAYARAN*
-> \`.show\` [refID]
-> \`.acc\` [refID]
-> \`.reject\` [refID] [alasan]
-> \`.scan\` [ticketID] [code]
+1. ✅ *VERIFIKASI PEMBAYARAN (Local Storage)*
+> \`.show\` [refID] - Lihat detail pembayaran
+> \`.acc\` [refID] - Approve & generate tiket
+> \`.reject\` [refID] [alasan] - Tolak pembayaran
+> \`.scan\` [ticketID] [code] - Scan tiket saat masuk
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-2. *LIHAT TRANSAKSI*
-> \`.riwayat\`
-> \`.riwayat pending\`
-> \`.riwayat acc\`
-> \`.riwayat reject\`
-> \`.riwayat\` [nomor_hp]
+2. 📊 *LAPORAN & ANALYTICS (Local Storage)*
+> \`.stok\` - Lihat stok tiket & penjualan
+> \`.riwayat\` - Lihat semua transaksi
+> \`.riwayat pending\` - Lihat pending
+> \`.riwayat acc\` - Lihat approved
+> \`.riwayat reject\` - Lihat rejected
+> \`.riwayat\` [nomor_hp] - Lihat user tertentu
 ┈ׅ──��─꯭─꯭──────꯭ׄ──ׅ┈
 
-3. *SISTEM*
-> \`.ping\`
-> \`.menu\`
+3. 🔍 *INFO (Local Storage)*
+> \`.menu\` - Lihat konser aktif
+> \`.ping\` - Cek status bot
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
 ⚠️ *BATASAN ADMIN:*
 > ❌ Tidak bisa order tiket
 > ❌ Tidak bisa checkout
 > ❌ Tidak bisa upload bukti transfer
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+📌 *DATA MANAGEMENT:*
+> Semua data disimpan di local storage (JSON)
+> Tidak ada lagi Firestore untuk tickets, concerts, bukti_transfer
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈`;
 
     } else {
       // USER/REGULAR COMMANDS
       helpText = `👤 *USER COMMANDS*
-> Pesan dan beli tiket konser
+> Pesan dan beli tiket konser (via local storage)
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-1. *PEMBELIAN TIKET*
-> \`.menu\`
-> \`.order\`
-> \`.payment\` 
-> \`.bukti_tf\` [jumlah] [catatan]
+1. 🎫 *PEMBELIAN TIKET (Local Storage)*
+> \`.menu\` - Lihat konser aktif
+> \`.order\` - Lihat detail & memesan
+> \`.payment\` - Lihat info pembayaran
+> \`.bukti_tf\` [jumlah] [catatan] - Upload bukti transfer
+> \`.checkout\` - (alias: .pay, .bayar, .pembayaran)
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-2. *LIHAT RIWAYAT*
-> \`.riwayat\`
-> \`.riwayat tiket\`
+2. 📜 *LIHAT RIWAYAT (Local Storage)*
+> \`.riwayat\` - Lihat riwayat pembayaran Anda
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-3. *SISTEM*
-> \`.ping\`
-> \`.help\`
+3. ⚙️ *SISTEM*
+> \`.ping\` - Cek status bot
+> \`.help\` - Tampilkan bantuan ini
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
 💡 *CATATAN PENTING:*
 > ✅ Command hanya bekerja di private chat
-> ✅ Screenshot bukti harus jelas
+> ✅ Screenshot bukti transfer harus jelas & lengkap
 > ✅ Verifikasi maksimal 5 menit
+> ✅ Stok real-time (tidak perlu refresh)
+> ✅ Data aman di local storage (JSON)
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈`;
     }
     
