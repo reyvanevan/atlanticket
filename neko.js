@@ -1630,6 +1630,29 @@ ${ticketSentStatus}`);
       ticketID: ticketID,
       qrCode: null // QR dikirim sebagai file
     });
+    
+    // **DECREASE STOK** in concerts collection
+    // Find the active concert first (usually UMBandung Fest)
+    const konserQuery = await firestore.collection('concerts')
+      .where('status', '==', 'aktif')
+      .limit(1)
+      .get();
+    
+    if (!konserQuery.empty) {
+      const konserDoc = konserQuery.docs[0];
+      const currentStok = konserDoc.data().stok || 0;
+      
+      if (currentStok > 0) {
+        await konserDoc.ref.update({
+          stok: currentStok - 1,
+          updatedAt: new Date()
+        });
+        console.log(`📉 Stok berkurang: ${currentStok} → ${currentStok - 1}`);
+      } else {
+        console.warn('⚠️ Stok sudah habis!');
+        m.reply('⚠️ Warning: Stok tiket habis!');
+      }
+    }
 
     // Update status di memory
     data.status = 'approved';
@@ -2110,12 +2133,26 @@ case 'stok': {
     // Get all tickets
     const ticketsSnapshot = await firestore.collection('tickets').get();
     
-    if (ticketsSnapshot.empty) {
-      return m.reply('❌ Belum ada data tiket di sistem');
+    // Get the active concert to get remaining stock
+    const konserQuery = await firestore.collection('concerts')
+      .where('status', '==', 'aktif')
+      .limit(1)
+      .get();
+    
+    let totalStokAwal = 0;
+    let sisaStok = 0;
+    
+    if (!konserQuery.empty) {
+      const konserData = konserQuery.docs[0].data();
+      sisaStok = konserData.stok || 0;
+      const stokAwal = konserData.stokAwal || 0;
+      totalStokAwal = stokAwal > 0 ? stokAwal : (ticketsSnapshot.size + sisaStok);
+    } else {
+      // Fallback: calculate from tickets
+      totalStokAwal = ticketsSnapshot.size;
     }
     
-    let totalTiket = 0;
-    let totalTerjual = 0;
+    let totalTerjual = ticketsSnapshot.size;
     let totalDiScan = 0;
     let totalBelumDiScan = 0;
     let perKonserData = {};
@@ -2123,8 +2160,6 @@ case 'stok': {
     // Parse semua tiket
     ticketsSnapshot.forEach(doc => {
       const ticket = doc.data();
-      totalTiket++;
-      totalTerjual++; // Semua tiket di collection tickets = sudah terjual
       
       if (ticket.status === 'used') {
         totalDiScan++;
@@ -2156,14 +2191,23 @@ case 'stok': {
     
     let pendingTiket = buktiSnapshot.size;
     
+    // Calculate percentages
+    const persentaseTerjual = totalStokAwal > 0 ? ((totalTerjual / totalStokAwal) * 100).toFixed(1) : 0;
+    const persentaseSisa = totalStokAwal > 0 ? ((sisaStok / totalStokAwal) * 100).toFixed(1) : 0;
+    
     // Build response text
     let stokText = `📊 *STOK TIKET UMBandung Fest*
 
 *STATUS KESELURUHAN:*
-> Total Terjual : ${totalTerjual} tiket
-> Sudah Digunakan : ${totalDiScan} tiket
-> Belum Digunakan : ${totalBelumDiScan} tiket
-> Pending/Approval : ${pendingTiket} bukti
+> Total Stok Awal : ${totalStokAwal} tiket
+> ✅ Terjual : ${totalTerjual} tiket (${persentaseTerjual}%)
+> 📦 Sisa Stok : ${sisaStok} tiket (${persentaseSisa}%)
+> ⏳ Pending/Approval : ${pendingTiket} bukti
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+*PENGGUNAAN TIKET:*
+> 🔓 Belum Digunakan : ${totalBelumDiScan} tiket
+> ✔️ Sudah Digunakan : ${totalDiScan} tiket
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
 *DETAIL PER KONSER:*\n`;
@@ -2171,11 +2215,11 @@ case 'stok': {
     let no = 1;
     Object.keys(perKonserData).forEach(konser => {
       const data = perKonserData[konser];
-      const persentaseDipakai = ((data.diScan / data.total) * 100).toFixed(1);
+      const persentaseDipakai = data.total > 0 ? ((data.diScan / data.total) * 100).toFixed(1) : 0;
       
       stokText += `\n${no}. *${konser}*
 > Harga : Rp ${data.harga.toLocaleString('id-ID')}
-> Total : ${data.total} tiket
+> Total Terjual : ${data.total} tiket
 > ✅ Digunakan : ${data.diScan} (${persentaseDipakai}%)
 > ⏳ Belum Digunakan : ${data.belumDiScan}
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈`;
@@ -2186,9 +2230,11 @@ case 'stok': {
     stokText += `
 
 *INFORMASI:*
-📌 Tiket "Digunakan" = Sudah di-scan saat masuk
-📌 Tiket "Belum Digunakan" = Sudah terjual tapi belum masuk
-📌 "Pending/Approval" = Bukti transfer dalam review
+📌 Stok Awal = Total tiket yang di-setup dari awal
+📌 Terjual = Tiket yang sudah dikirim ke customer
+📌 Sisa Stok = Tiket yang belum terjual (ADMIN ONLY)
+📌 Digunakan = Tiket yang sudah di-scan saat masuk
+📌 Pending/Approval = Bukti transfer dalam review
 
 _Update: ${moment().tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss')} WIB_`;
     
