@@ -2130,19 +2130,21 @@ case 'stok': {
     const persentaseSisa = totalStokAwal > 0 ? ((sisaStok / totalStokAwal) * 100).toFixed(1) : 0;
     
     // Build response text
-    let stokText = `STOK TIKET ${activeKonser.nama.toUpperCase()}
+    let stokText = `*STOK TIKET ${activeKonser.nama.toUpperCase()}*
 
-STATUS KESELURUHAN:
-Stok Awal : ${totalStokAwal} tiket
-Terjual : ${totalTerjual} tiket (${persentaseTerjual}%)
-Sisa Stok : ${sisaStok} tiket (${persentaseSisa}%)
-Pending/Approval : ${pendingTiket} bukti
+*STATUS KESELURUHAN:*
+> Stok Awal : ${totalStokAwal} tiket
+> Terjual : ${totalTerjual} tiket (${persentaseTerjual}%)
+> Sisa Stok : ${sisaStok} tiket (${persentaseSisa}%)
+> Pending/Approval : ${pendingTiket} bukti
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-PENGGUNAAN TIKET:
-Belum Digunakan : ${totalBelumDiScan} tiket
-Sudah Digunakan : ${totalDiScan} tiket
+*PENGGUNAAN TIKET:*
+> Belum Digunakan : ${totalBelumDiScan} tiket
+> Sudah Digunakan : ${totalDiScan} tiket
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-DETAIL PER KONSER:
+*DETAIL PER KONSER:*
 `;
     
     let no = 1;
@@ -2150,25 +2152,26 @@ DETAIL PER KONSER:
       const data = perKonserData[konser];
       const persentaseDipakai = data.total > 0 ? ((data.diScan / data.total) * 100).toFixed(1) : 0;
       
-      stokText += `\n${no}. ${konser}
-Harga : Rp ${data.harga.toLocaleString('id-ID')}
-Total Terjual : ${data.total} tiket
-Digunakan : ${data.diScan} (${persentaseDipakai}%)
-Belum Digunakan : ${data.belumDiScan}
-`;
+      stokText += `\n${no}. *${konser}*
+> Harga : Rp ${data.harga.toLocaleString('id-ID')}
+> Total Terjual : ${data.total} tiket
+> Digunakan : ${data.diScan} (${persentaseDipakai}%)
+> Belum Digunakan : ${data.belumDiScan}
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈`;
       no++;
     });
     
     // Add info section
     stokText += `
-INFORMASI:
-- Stok Awal = Total tiket yang di-setup dari awal
-- Terjual = Jumlah tiket yang sudah disetujui (stokAwal - sisaStok)
-- Sisa Stok = Tiket yang belum terjual
-- Digunakan = Tiket yang sudah di-scan saat entry
-- Pending/Approval = Bukti transfer dalam review
 
-Update: ${moment().tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss')} WIB`;
+*INFORMASI:*
+> Stok Awal = Total tiket yang di-setup dari awal
+> Terjual = Jumlah tiket yang sudah disetujui (stokAwal - sisaStok)
+> Sisa Stok = Tiket yang belum terjual
+> Digunakan = Tiket yang sudah di-scan saat entry
+> Pending/Approval = Bukti transfer dalam review
+
+_Update: ${moment().tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss')} WIB_`;
     
     return m.reply(stokText);
     
