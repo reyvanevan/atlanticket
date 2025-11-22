@@ -2578,6 +2578,8 @@ Stok & riwayat sudah kembali ke awal!`;
   break;
 }
 
+case 'rekap':
+case 'recap':
 case 'export_csv': {
   if (!isOwner) return m.reply('Hanya owner yang bisa!');
   
