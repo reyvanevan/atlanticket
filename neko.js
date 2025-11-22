@@ -1182,11 +1182,8 @@ Kirim gambar + tuliskan:
       global.pendingPayments = {};
     }
 
-    // Get user name dari berbagai sumber
+    // Get user name dari m.pushName
     let userName = m.pushName || 'Unknown User';
-    if (global.db.users && global.db.users[m.sender] && global.db.users[m.sender].nama) {
-      userName = global.db.users[m.sender].nama;
-    }
 
     // Extract nomor HP dari m.key.senderPn (Sender Phone Number) - paling reliable!
     // Format: 6289653544913@s.whatsapp.net
@@ -2357,10 +2354,10 @@ m.key.remoteJid: ${m.key?.remoteJid}
 m.key.participant: ${m.key?.participant}
 m.chat: ${m.chat}
 sender variable: ${sender}
-pushname: ${pushname}
+pushname: ${m.pushName}
 
-Global DB:
-${JSON.stringify(global.db.users?.[m.sender] || {}, null, 2)}
+Global Admin List:
+${JSON.stringify(global.admin || [], null, 2)}
 
 Lihat console untuk Object.keys!`;
 
