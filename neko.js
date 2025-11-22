@@ -84,8 +84,96 @@ const saveAdminList = () => {
   }
 };
 
+// ========== LOCAL STORAGE HELPERS ==========
+
+// Load Tickets
+const loadTickets = () => {
+  try {
+    const data = fs.readFileSync('./db/tickets.json', 'utf8');
+    const parsed = JSON.parse(data);
+    return parsed.tickets || [];
+  } catch (err) {
+    return [];
+  }
+};
+
+// Save Tickets
+const saveTickets = (tickets) => {
+  try {
+    fs.writeFileSync('./db/tickets.json', JSON.stringify({ tickets }, null, 2));
+    console.log(color(`💾 Tickets saved (${tickets.length} tickets)`, 'green'));
+    return true;
+  } catch (err) {
+    console.error(color(`❌ Error saving tickets: ${err.message}`, 'red'));
+    return false;
+  }
+};
+
+// Load Bukti Transfer
+const loadBuktiTransfer = () => {
+  try {
+    const data = fs.readFileSync('./db/bukti_transfer.json', 'utf8');
+    const parsed = JSON.parse(data);
+    return parsed.bukti_transfer || [];
+  } catch (err) {
+    return [];
+  }
+};
+
+// Save Bukti Transfer
+const saveBuktiTransfer = (bukti) => {
+  try {
+    fs.writeFileSync('./db/bukti_transfer.json', JSON.stringify({ bukti_transfer: bukti }, null, 2));
+    console.log(color(`💾 Bukti Transfer saved (${bukti.length} records)`, 'green'));
+    return true;
+  } catch (err) {
+    console.error(color(`❌ Error saving bukti transfer: ${err.message}`, 'red'));
+    return false;
+  }
+};
+
+// Load Concerts
+const loadConcerts = () => {
+  try {
+    const data = fs.readFileSync('./db/concerts.json', 'utf8');
+    const parsed = JSON.parse(data);
+    return parsed.concerts || [];
+  } catch (err) {
+    return [];
+  }
+};
+
+// Save Concerts
+const saveConcerts = (concerts) => {
+  try {
+    fs.writeFileSync('./db/concerts.json', JSON.stringify({ concerts }, null, 2));
+    console.log(color(`💾 Concerts saved (${concerts.length} concerts)`, 'green'));
+    return true;
+  } catch (err) {
+    console.error(color(`❌ Error saving concerts: ${err.message}`, 'red'));
+    return false;
+  }
+};
+
+// Initialize local storage on startup
+const initLocalStorage = () => {
+  const files = ['./db/tickets.json', './db/bukti_transfer.json', './db/concerts.json'];
+  files.forEach(file => {
+    if (!fs.existsSync(file)) {
+      const defaultContent = file.includes('tickets') ? { tickets: [] } 
+                            : file.includes('bukti') ? { bukti_transfer: [] }
+                            : { concerts: [] };
+      fs.writeFileSync(file, JSON.stringify(defaultContent, null, 2));
+      console.log(color(`✅ Created ${file}`, 'green'));
+    }
+  });
+};
+
 module.exports = client = async (client, m, chatUpdate, store, db_respon_list) => {
   try {
+      // Initialize local storage on startup
+      initLocalStorage();
+      
       // Skip messages from bot itself (prevent infinite loop)
       if (m.key?.fromMe) return;
       
