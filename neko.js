@@ -27,7 +27,6 @@ const initBaileys = (async () => {
 
 const fs = require('fs')
 const pino = require('pino')
-const pushname = m.pushName || "No Name"
 let defaultMarkupPercentage = 0.01; 
 const { firefox } = require('playwright');
 
@@ -48,46 +47,7 @@ if (!admin.apps.length) {
   //databaseURL: 'https://your-project-id.firebaseio.com',
 // });
 //=========== DATABASE ===========//
-try {
-    // Pastikan global.db sudah ada
-    if (!global.db) {
-        global.db = {};
-    }
 
-    // Fungsi utilitas untuk memeriksa apakah nilai adalah angka
-    let isNumber = x => typeof x === 'number' && !isNaN(x);
-
-    // Inisialisasi database pengguna
-    let user = global.db.users?.[m.sender];
-    if (typeof user !== 'object') {
-        global.db.users = global.db.users || {}; // Pastikan users sudah ada
-        global.db.users[m.sender] = {};
-    }
-
-    // Isi data pengguna dengan default jika belum ada
-    let userData = global.db.users[m.sender];
-    if (userData) {
-        if (!('daftar' in userData)) userData.daftar = false; // Status pendaftaran
-        if (!('nama' in userData)) userData.nama = `${pushname}`; // Nama pengguna
-        if (!('saldo' in userData)) userData.saldo = 0; // Default saldo awal
-        if (!('level' in userData)) userData.level = 'member'; // Default level adalah member
-        if (!('transaksi' in userData)) userData.transaksi = null; // Tidak ada transaksi aktif
-        if (!('history' in userData)) userData.history = []; // Riwayat transaksi kosong
-        if (!('purchases' in userData)) userData.purchases = []; // Riwayat pembelian kosong
-    } else {
-        global.db.users[m.sender] = {
-            daftar: false,
-            nama: `${pushname}`,
-            saldo: 0, // Default saldo awal
-            level: 'member',
-            transaksi: null,
-            history: [],
-            purchases: []
-        };
-    }
-} catch (err) {
-    console.error("Error saat menginisialisasi database:", err);
-}
 const antilink = JSON.parse(fs.readFileSync('./src/antilink.json'));
 const md5 = require('md5');
 const isCreator = [nomerBot, ...global.owner].map(v => v.replace(/[^0-9]/g, '') + '@s.whatsapp.net').includes(m.sender)
