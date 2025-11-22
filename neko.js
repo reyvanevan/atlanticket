@@ -2489,6 +2489,8 @@ case 'reset_stok': {
   if (!isOwner) return m.reply('Hanya owner yang bisa!');
   
   try {
+    const resetMode = text?.toLowerCase() || 'normal'; // normal atau 'all'
+    
     // Get active concert
     const activeConcert = concertManager.getActive();
     
@@ -2500,9 +2502,13 @@ case 'reset_stok': {
     const ticketStats = ticketManager.getStats();
     const buktiStats = buktiTransferManager.getStats();
     
-    // Count by concert
+    // Count by concert - dengan debug
     const allTickets = ticketManager.getAll();
     const concertTickets = allTickets.filter(t => t.konser === activeConcert.nama);
+    
+    // Debug: cek nama konser
+    const uniqueKonsers = [...new Set(allTickets.map(t => t.konser))];
+    const debugInfo = uniqueKonsers.length > 0 ? `\n\nDEBUG - Konser di data: [${uniqueKonsers.join(', ')}]\nKonser aktif: [${activeConcert.nama}]` : '';
     
     const ticketsByStatus = {
       aktif: concertTickets.filter(t => t.status === 'aktif').length,
@@ -2529,12 +2535,14 @@ Stok Sekarang : ${activeConcert.stok}
 - Aktif (belum digunakan) : ${ticketsByStatus.aktif}
 - Used (sudah digunakan) : ${ticketsByStatus.used}
 - Invalid : ${ticketsByStatus.invalid}
-Total Tiket : ${concertTickets.length}
+Total Tiket (matching konser) : ${concertTickets.length}
+Total Tiket (semua) : ${allTickets.length}
 
 *BREAKDOWN BUKTI TRANSFER:*
 - Pending (approval) : ${buktiByStatus.pending}
 - Approved (terjual) : ${buktiByStatus.approved}
 - Rejected : ${buktiByStatus.rejected}
+${debugInfo}
 
 `;
 
@@ -2545,10 +2553,18 @@ Total Tiket : ${concertTickets.length}
       return m.reply('Gagal reset stok!');
     }
     
-    // 2. Delete all tickets for this concert
-    const allTicketsData = ticketManager.getAll();
-    const ticketsToKeep = allTicketsData.filter(t => t.konser !== activeConcert.nama);
-    ticketManager.saveAll(ticketsToKeep);
+    // 2. Delete tickets
+    let deletedTicketCount = 0;
+    if (resetMode === 'all') {
+      // Force delete ALL tickets
+      deletedTicketCount = allTickets.length;
+      ticketManager.saveAll([]);
+    } else {
+      // Normal mode: hanya delete tickets dengan konser yang match
+      const ticketsToKeep = allTickets.filter(t => t.konser !== activeConcert.nama);
+      deletedTicketCount = allTickets.length - ticketsToKeep.length;
+      ticketManager.saveAll(ticketsToKeep);
+    }
     
     // 3. Delete all bukti transfer
     buktiTransferManager.saveAll([]);
@@ -2564,11 +2580,14 @@ Status : ${newData.status}
 *✅ Reset berhasil!*
 
 YANG DIHAPUS:
-- Tiket : ${concertTickets.length} data
+- Tiket : ${deletedTicketCount} data ${resetMode === 'all' ? '(mode: FORCE ALL)' : '(mode: by konser)'}
 - Bukti Transfer : ${allBukti.length} data
 - Riwayat Admin/User : CLEARED
 
-Stok & riwayat sudah kembali ke awal!`;
+Stok & riwayat sudah kembali ke awal!
+
+*Catatan:*
+Pakai '.reset_stok all' untuk force delete SEMUA tiket`;
     
     m.reply(statsText);
     
