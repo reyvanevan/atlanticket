@@ -2070,7 +2070,7 @@ Akses admin telah dihapus sepenuhnya. Untuk akses kembali, hubungi owner.`;
       break
       
 case 'stok': {
-  if (!isAdmin) return m.reply('❌ Hanya admin/owner yang bisa melihat stok!');
+  if (!isAdmin) return m.reply('Hanya admin/owner yang bisa melihat stok!');
   
   try {
     // Get all tickets from local storage
@@ -2080,39 +2080,44 @@ case 'stok': {
     const activeKonser = concertManager.getActive();
     
     if (!activeKonser) {
-      return m.reply('❌ Tidak ada konser aktif! Silahkan setup konser terlebih dahulu.');
+      return m.reply('Tidak ada konser aktif! Silahkan setup konser terlebih dahulu.');
     }
     
     const totalStokAwal = activeKonser.stokAwal || 0;  // Reference awal (tidak berubah)
     const sisaStok = activeKonser.stok || 0;           // Current remaining
     
-    let totalTerjual = allTickets.length;
+    // Calculate terjual from stok difference (NOT from ticket count)
+    // This way it aligns with actual stok changes from approval/rejection
+    let totalTerjual = totalStokAwal - sisaStok;
     let totalDiScan = 0;
     let totalBelumDiScan = 0;
     let perKonserData = {};
     
-    // Parse semua tiket
+    // Parse semua tiket untuk breakdown detail
     allTickets.forEach(ticket => {
-      if (ticket.status === 'used') {
-        totalDiScan++;
-      } else if (ticket.status === 'aktif') {
-        totalBelumDiScan++;
-      }
-      
-      // Group by konser
-      if (!perKonserData[ticket.konser]) {
-        perKonserData[ticket.konser] = {
-          total: 0,
-          diScan: 0,
-          belumDiScan: 0,
-          harga: ticket.harga || 0
-        };
-      }
-      perKonserData[ticket.konser].total++;
-      if (ticket.status === 'used') {
-        perKonserData[ticket.konser].diScan++;
-      } else {
-        perKonserData[ticket.konser].belumDiScan++;
+      // Only count tickets from active concert
+      if (ticket.konser === activeKonser.nama) {
+        if (ticket.status === 'used') {
+          totalDiScan++;
+        } else if (ticket.status === 'aktif') {
+          totalBelumDiScan++;
+        }
+        
+        // Group by konser
+        if (!perKonserData[ticket.konser]) {
+          perKonserData[ticket.konser] = {
+            total: 0,
+            diScan: 0,
+            belumDiScan: 0,
+            harga: ticket.harga || 0
+          };
+        }
+        perKonserData[ticket.konser].total++;
+        if (ticket.status === 'used') {
+          perKonserData[ticket.konser].diScan++;
+        } else {
+          perKonserData[ticket.konser].belumDiScan++;
+        }
       }
     });
     
@@ -2125,53 +2130,51 @@ case 'stok': {
     const persentaseSisa = totalStokAwal > 0 ? ((sisaStok / totalStokAwal) * 100).toFixed(1) : 0;
     
     // Build response text
-    let stokText = `📊 *STOK TIKET ${activeKonser.nama.toUpperCase()}*
+    let stokText = `STOK TIKET ${activeKonser.nama.toUpperCase()}
 
-*STATUS KESELURUHAN:*
-> Total Stok Awal : ${totalStokAwal} tiket
-> ✅ Terjual : ${totalTerjual} tiket (${persentaseTerjual}%)
-> 📦 Sisa Stok : ${sisaStok} tiket (${persentaseSisa}%)
-> ⏳ Pending/Approval : ${pendingTiket} bukti
-┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+STATUS KESELURUHAN:
+Stok Awal : ${totalStokAwal} tiket
+Terjual : ${totalTerjual} tiket (${persentaseTerjual}%)
+Sisa Stok : ${sisaStok} tiket (${persentaseSisa}%)
+Pending/Approval : ${pendingTiket} bukti
 
-*PENGGUNAAN TIKET:*
-> 🔓 Belum Digunakan : ${totalBelumDiScan} tiket
-> ✔️ Sudah Digunakan : ${totalDiScan} tiket
-┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+PENGGUNAAN TIKET:
+Belum Digunakan : ${totalBelumDiScan} tiket
+Sudah Digunakan : ${totalDiScan} tiket
 
-*DETAIL PER KONSER:*\n`;
+DETAIL PER KONSER:
+`;
     
     let no = 1;
     Object.keys(perKonserData).forEach(konser => {
       const data = perKonserData[konser];
       const persentaseDipakai = data.total > 0 ? ((data.diScan / data.total) * 100).toFixed(1) : 0;
       
-      stokText += `\n${no}. *${konser}*
-> Harga : Rp ${data.harga.toLocaleString('id-ID')}
-> Total Terjual : ${data.total} tiket
-> ✅ Digunakan : ${data.diScan} (${persentaseDipakai}%)
-> ⏳ Belum Digunakan : ${data.belumDiScan}
-┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈`;
+      stokText += `\n${no}. ${konser}
+Harga : Rp ${data.harga.toLocaleString('id-ID')}
+Total Terjual : ${data.total} tiket
+Digunakan : ${data.diScan} (${persentaseDipakai}%)
+Belum Digunakan : ${data.belumDiScan}
+`;
       no++;
     });
     
     // Add info section
     stokText += `
+INFORMASI:
+- Stok Awal = Total tiket yang di-setup dari awal
+- Terjual = Jumlah tiket yang sudah disetujui (stokAwal - sisaStok)
+- Sisa Stok = Tiket yang belum terjual
+- Digunakan = Tiket yang sudah di-scan saat entry
+- Pending/Approval = Bukti transfer dalam review
 
-*INFORMASI:*
-📌 Stok Awal = Total tiket yang di-setup dari awal
-📌 Terjual = Tiket yang sudah dikirim ke customer
-📌 Sisa Stok = Tiket yang belum terjual (ADMIN ONLY)
-📌 Digunakan = Tiket yang sudah di-scan saat masuk
-📌 Pending/Approval = Bukti transfer dalam review
-
-_Update: ${moment().tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss')} WIB_`;
+Update: ${moment().tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss')} WIB`;
     
     return m.reply(stokText);
     
   } catch (err) {
     console.error('Error:', err);
-    m.reply(`❌ Error: ${err.message}`);
+    m.reply(`Error: ${err.message}`);
   }
   break;
 }
