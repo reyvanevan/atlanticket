@@ -2383,6 +2383,48 @@ case 'reset_stok': {
       return m.reply('Belum ada konser aktif untuk di-reset!');
     }
     
+    // Get detailed stats before reset
+    const ticketStats = ticketManager.getStats();
+    const buktiStats = buktiTransferManager.getStats();
+    
+    // Count by concert
+    const allTickets = ticketManager.getAll();
+    const concertTickets = allTickets.filter(t => t.konser === activeConcert.nama);
+    
+    const ticketsByStatus = {
+      aktif: concertTickets.filter(t => t.status === 'aktif').length,
+      used: concertTickets.filter(t => t.status === 'used').length,
+      invalid: concertTickets.filter(t => t.status === 'invalid').length
+    };
+    
+    // Count bukti by status for this concert
+    const allBukti = buktiTransferManager.getAll();
+    const buktiByStatus = {
+      pending: allBukti.filter(b => b.status === 'pending').length,
+      approved: allBukti.filter(b => b.status === 'approved').length,
+      rejected: allBukti.filter(b => b.status === 'rejected').length
+    };
+    
+    // Show before reset stats
+    let statsText = `RESET STOK - BEFORE
+
+Konser : ${activeConcert.nama}
+Stok Awal : ${activeConcert.stokAwal}
+Stok Sekarang : ${activeConcert.stok}
+
+BREAKDOWN TIKET:
+- Aktif (belum digunakan) : ${ticketsByStatus.aktif}
+- Used (sudah digunakan) : ${ticketsByStatus.used}
+- Invalid : ${ticketsByStatus.invalid}
+Total Tiket : ${concertTickets.length}
+
+BREAKDOWN BUKTI TRANSFER:
+- Pending (approval) : ${buktiByStatus.pending}
+- Approved (terjual) : ${buktiByStatus.approved}
+- Rejected : ${buktiByStatus.rejected}
+
+`;
+
     // Reset stok to stokAwal
     const success = concertManager.resetStock(activeConcert.konserID);
     
@@ -2392,14 +2434,22 @@ case 'reset_stok': {
     
     const newData = concertManager.findById(activeConcert.konserID);
     
-    m.reply(`RESET STOK SUCCESS
+    statsText += `AFTER RESET:
 
-Konser : ${newData.nama}
 Stok Awal : ${newData.stokAwal}
 Stok Sekarang : ${newData.stok}
 Status : ${newData.status}
 
-Stok sudah di-reset ke nilai awal!`);
+✅ Reset berhasil! Stok kembali ke nilai awal.
+
+DEBUG INFO:
+Terjual (approved) : ${buktiByStatus.approved} bukti
+Pending (menunggu approval) : ${buktiByStatus.pending} bukti
+Belum Digunakan (aktif) : ${ticketsByStatus.aktif} tiket
+Sudah Digunakan : ${ticketsByStatus.used} tiket
+Invalid : ${ticketsByStatus.invalid} tiket`;
+    
+    m.reply(statsText);
     
   } catch (err) {
     m.reply(`Error: ${err.message}`);
