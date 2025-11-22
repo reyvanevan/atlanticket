@@ -2488,48 +2488,56 @@ case 'reset_stok': {
     };
     
     // Show before reset stats
-    let statsText = `RESET STOK - BEFORE
+    let statsText = `*RESET STOK - BEFORE*
 
 Konser : ${activeConcert.nama}
 Stok Awal : ${activeConcert.stokAwal}
 Stok Sekarang : ${activeConcert.stok}
 
-BREAKDOWN TIKET:
+*BREAKDOWN TIKET:*
 - Aktif (belum digunakan) : ${ticketsByStatus.aktif}
 - Used (sudah digunakan) : ${ticketsByStatus.used}
 - Invalid : ${ticketsByStatus.invalid}
 Total Tiket : ${concertTickets.length}
 
-BREAKDOWN BUKTI TRANSFER:
+*BREAKDOWN BUKTI TRANSFER:*
 - Pending (approval) : ${buktiByStatus.pending}
 - Approved (terjual) : ${buktiByStatus.approved}
 - Rejected : ${buktiByStatus.rejected}
 
 `;
 
-    // Reset stok to stokAwal
+    // 1. Reset stok to stokAwal
     const success = concertManager.resetStock(activeConcert.konserID);
     
     if (!success) {
       return m.reply('Gagal reset stok!');
     }
     
+    // 2. Delete all tickets for this concert
+    const allTicketsData = ticketManager.getAll();
+    const ticketsToKeep = allTicketsData.filter(t => t.konser !== activeConcert.nama);
+    ticketManager.saveAll(ticketsToKeep);
+    
+    // 3. Delete all bukti transfer
+    buktiTransferManager.saveAll([]);
+    
     const newData = concertManager.findById(activeConcert.konserID);
     
-    statsText += `AFTER RESET:
+    statsText += `*AFTER RESET:*
 
 Stok Awal : ${newData.stokAwal}
 Stok Sekarang : ${newData.stok}
 Status : ${newData.status}
 
-✅ Reset berhasil! Stok kembali ke nilai awal.
+*✅ Reset berhasil!*
 
-DEBUG INFO:
-Terjual (approved) : ${buktiByStatus.approved} bukti
-Pending (menunggu approval) : ${buktiByStatus.pending} bukti
-Belum Digunakan (aktif) : ${ticketsByStatus.aktif} tiket
-Sudah Digunakan : ${ticketsByStatus.used} tiket
-Invalid : ${ticketsByStatus.invalid} tiket`;
+YANG DIHAPUS:
+- Tiket : ${concertTickets.length} data
+- Bukti Transfer : ${allBukti.length} data
+- Riwayat Admin/User : CLEARED
+
+Stok & riwayat sudah kembali ke awal!`;
     
     m.reply(statsText);
     
