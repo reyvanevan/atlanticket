@@ -2083,31 +2083,68 @@ Anda sekarang memiliki akses sebagai user biasa.`;
   break;
 }
 
-case 'getrole': {
+case 'listusers':
+case 'listuser':
+  case 'listadmin':
+case 'users': {
   if (!isDeveloper) return m.reply('❌ Hanya Developer (Owner) yang bisa!');
-  
-  if (!text) return m.reply('Format: .getrole [nomor]\nContoh: .getrole 6285871756001');
-  
-  const targetPhone = text.trim();
   
   try {
     const firestore = admin.firestore();
-    const targetJid = targetPhone.replace(/[^0-9]/g, '') + '@s.whatsapp.net';
+    const usersSnapshot = await firestore.collection('users').get();
     
-    const userDoc = await firestore.collection('users').doc(targetJid).get();
-    
-    if (!userDoc.exists) {
-      return m.reply(`❌ User tidak ditemukan: ${targetPhone}`);
+    if (usersSnapshot.empty) {
+      return m.reply('❌ Belum ada user di database.');
     }
     
-    const data = userDoc.data();
-    m.reply(`📋 *INFO USER*
-
-> Nomor : ${data.phone || targetPhone}
-> Role : ${(data.role || 'user').toUpperCase()}
-> Updated : ${data.updatedAt ? new Date(data.updatedAt.toDate()).toLocaleString('id-ID') : 'N/A'}
-> Updated By : ${data.updatedBy || 'N/A'}`);
+    let adminList = [];
+    let userList = [];
+    let totalUsers = 0;
+    
+    usersSnapshot.forEach(doc => {
+      const data = doc.data();
+      const phone = data.phone || doc.id.split('@')[0];
+      const role = (data.role || 'user').toLowerCase();
+      const name = data.name || 'Unknown';
+      
+      totalUsers++;
+      
+      const userInfo = `${phone} - ${name}`;
+      
+      if (role === 'admin') {
+        adminList.push(userInfo);
+      } else {
+        userList.push(userInfo);
+      }
+    });
+    
+    let replyMsg = `👥 *DAFTAR USER FIRESTORE*\n\n`;
+    
+    if (adminList.length > 0) {
+      replyMsg += `*👨‍💼 ADMIN (${adminList.length})*\n`;
+      adminList.forEach((user, idx) => {
+        replyMsg += `${idx + 1}. ${user}\n`;
+      });
+      replyMsg += `\n`;
+    }
+    
+    if (userList.length > 0) {
+      replyMsg += `*👤 USER (${userList.length})*\n`;
+      // Limit to 20 users to avoid too long message
+      const displayUsers = userList.slice(0, 20);
+      displayUsers.forEach((user, idx) => {
+        replyMsg += `${idx + 1}. ${user}\n`;
+      });
+      if (userList.length > 20) {
+        replyMsg += `... dan ${userList.length - 20} user lainnya\n`;
+      }
+    }
+    
+    replyMsg += `\n*Total: ${totalUsers} users*`;
+    
+    m.reply(replyMsg);
   } catch (err) {
+    console.error('Error listing users:', err);
     m.reply(`❌ Error: ${err.message}`);
   }
   break;
