@@ -2105,16 +2105,13 @@ case 'users': {
       const data = doc.data();
       const phone = data.phone || doc.id.split('@')[0];
       const role = (data.role || 'user').toLowerCase();
-      const name = data.name || 'Unknown';
       
       totalUsers++;
       
-      const userInfo = `${phone} - ${name}`;
-      
       if (role === 'admin') {
-        adminList.push(userInfo);
+        adminList.push(phone);
       } else {
-        userList.push(userInfo);
+        userList.push(phone);
       }
     });
     
@@ -2122,8 +2119,8 @@ case 'users': {
     
     if (adminList.length > 0) {
       replyMsg += `*👨‍💼 ADMIN (${adminList.length})*\n`;
-      adminList.forEach((user, idx) => {
-        replyMsg += `${idx + 1}. ${user}\n`;
+      adminList.forEach((phone, idx) => {
+        replyMsg += `${idx + 1}. ${phone}\n`;
       });
       replyMsg += `\n`;
     }
@@ -2132,15 +2129,15 @@ case 'users': {
       replyMsg += `*👤 USER (${userList.length})*\n`;
       // Limit to 20 users to avoid too long message
       const displayUsers = userList.slice(0, 20);
-      displayUsers.forEach((user, idx) => {
-        replyMsg += `${idx + 1}. ${user}\n`;
+      displayUsers.forEach((phone, idx) => {
+        replyMsg += `${idx + 1}. ${phone}\n`;
       });
       if (userList.length > 20) {
-        replyMsg += `... dan ${userList.length - 20} user lainnya\n`;
+        replyMsg += `\n... dan ${userList.length - 20} user lainnya`;
       }
     }
     
-    replyMsg += `\n*Total: ${totalUsers} users*`;
+    replyMsg += `\n\n*Total: ${totalUsers} users*`;
     
     m.reply(replyMsg);
   } catch (err) {
