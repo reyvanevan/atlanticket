@@ -767,29 +767,23 @@ _Pembayaran tidak terverifikasi - hubungi user_`;
 
 case 'menu': {
   try {
-    const firestore = admin.firestore();
-    const konserSnapshot = await firestore.collection('concerts').where('status', '==', 'aktif').get();
+    const activeKonser = concertManager.getActive();
     
-    if (konserSnapshot.empty) {
+    if (!activeKonser) {
       return m.reply('❌ Belum ada konser yang tersedia. Hubungi admin!');
     }
 
-    let menuText = `🎫 *TIKET KONSER UMBANDUNG FEST* 🎫
+    let menuText = `🎫 *TIKET KONSER ${activeKonser.nama.toUpperCase()}* 🎫
 
 > Pilih konser yang ingin Anda beli:
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈\n`;
 
-    let index = 1;
-    konserSnapshot.forEach(doc => {
-      const data = doc.data();
-      menuText += `\n${index}. *${data.nama}*
-> Tanggal : ${data.tanggal}
-> Jam : ${data.jam}
-> Harga : Rp ${data.harga.toLocaleString('id-ID')}
+    menuText += `\n1. *${activeKonser.nama}*
+> Tanggal : ${activeKonser.tanggal}
+> Jam : ${activeKonser.jam}
+> Harga : Rp ${activeKonser.harga.toLocaleString('id-ID')}
 > Status : ✅
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈`;
-      index++;
-    });
 
     menuText += `\n> Balas dengan: .order
 > Untuk melihat detail & memesan tiket`;
@@ -913,73 +907,41 @@ case 'order': {
   if (isAdmin && !isOwner) return m.reply('❌ Admin tidak bisa order tiket! Hanya user biasa.');
   
   try {
-    const firestore = admin.firestore();
-    const konserSnapshot = await firestore.collection('concerts').where('status', '==', 'aktif').get();
+    const activeKonser = concertManager.getActive();
     
-    if (konserSnapshot.empty) {
+    if (!activeKonser) {
       return m.reply('❌ Belum ada konser tersedia!');
     }
 
-    const konserArray = [];
-    konserSnapshot.forEach(doc => {
-      konserArray.push({ id: doc.id, ...doc.data() });
-    });
-
-    // Jika hanya 1 konser, langsung tampilkan detail
-    if (konserArray.length === 1) {
-      const konser = konserArray[0];
-      
-      // Fetch admin contact dari local storage
-      let adminInfo = '';
-      try {
-        if (global.admin && global.admin.length > 0) {
-          adminInfo = '\n\n👨‍💼 *HUBUNGI ADMIN:*';
-          global.admin.forEach((adminPhone, index) => {
-            const adminName = `Admin ${index + 1}`;
-            adminInfo += `\n${index + 1}. ${adminName}\n> wa.me/${adminPhone}`;
-          });
-        }
-      } catch (err) {
-        console.log('Warning: Gagal display admin:', err.message);
+    // Fetch admin contact dari local storage
+    let adminInfo = '';
+    try {
+      if (global.admin && global.admin.length > 0) {
+        adminInfo = '\n\n👨‍💼 *HUBUNGI ADMIN:*';
+        global.admin.forEach((adminPhone, index) => {
+          const adminName = `Admin ${index + 1}`;
+          adminInfo += `\n${index + 1}. ${adminName}\n> wa.me/${adminPhone}`;
+        });
       }
-      
-      const orderText = `📋 *DETAIL TIKET KONSER*
+    } catch (err) {
+      console.log('Warning: Gagal display admin:', err.message);
+    }
+    
+    const orderText = `📋 *DETAIL TIKET KONSER*
 
-🎤 *${konser.nama}*
-> Event : ${konser.nama}
-> Tanggal : ${konser.tanggal}
-> Jam : ${konser.jam}
-> Lokasi : ${konser.lokasi}
-> Harga : Rp ${konser.harga.toLocaleString('id-ID')}
-> Info : ${konser.deskripsi}
+🎤 *${activeKonser.nama}*
+> Event : ${activeKonser.nama}
+> Tanggal : ${activeKonser.tanggal}
+> Jam : ${activeKonser.jam}
+> Lokasi : ${activeKonser.lokasi}
+> Harga : Rp ${activeKonser.harga.toLocaleString('id-ID')}
+> Info : ${activeKonser.deskripsi}
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
 📸 *UNTUK ORDER:*
-> Balas .payment untuk lanjut ke pembayaran`;
-      return m.reply(orderText);
-    }
-
-    // Jika lebih dari 1 konser, tampilkan list
-    let menuText = `🎫 *PILIH KONSER YANG INGIN DIBELI*
-
-> Tersedia ${konserArray.length} konser:
-┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈\n`;
-
-    konserArray.forEach((konser, index) => {
-      menuText += `\n${index + 1}. *${konser.nama}*
-> Tanggal : ${konser.tanggal}
-> Jam : ${konser.jam}
-> Harga : Rp ${konser.harga.toLocaleString('id-ID')}
-> Stok : ${konser.stokTersisa} tiket
-┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈`;
-    });
-
-    menuText += `\n*Untuk melihat detail setiap konser:*
-> Balas nomor: 1, 2, 3, dst
-
-> Atau gunakan .menu untuk melihat info lengkap`;
-
-    m.reply(menuText);
+> Balas .payment untuk lanjut ke pembayaran${adminInfo}`;
+    
+    return m.reply(orderText);
   } catch (err) {
     m.reply(`❌ Error: ${err.message}`);
   }
@@ -995,8 +957,6 @@ case 'pembayaran': {
   if (isAdmin && !isOwner) return m.reply('❌ Admin tidak bisa checkout! Hanya user biasa.');
   
   try {
-    const firestore = admin.firestore();
-    
     // Fetch admin contact from local storage
     let adminInfo = '';
     try {
@@ -1139,32 +1099,22 @@ case 'confirm_setup': {
   if (!global.setupTempData) return m.reply('❌ Tidak ada data setup yang pending!');
 
   try {
-    const firestore = admin.firestore();
     const { nama, tanggal, jam, lokasi, hargaNum, stokNum, deskripsi, createdBy, createdAt } = global.setupTempData;
 
-    // Generate konser ID
-    const konserRef = firestore.collection('concerts').doc();
-    const konserData = {
-      konserID: konserRef.id,
+    // Create concert using local storage manager
+    const concert = concertManager.create({
       nama: nama,
       tanggal: tanggal,
       jam: jam,
       lokasi: lokasi,
       harga: hargaNum,
       stokAwal: stokNum,
-      stokTersisa: stokNum,
-      deskripsi: deskripsi,
-      status: 'aktif',
-      dibuat: new Date(),
-      dibuatOleh: createdBy,
-      diupdate: new Date()
-    };
-
-    await konserRef.set(konserData);
+      deskripsi: deskripsi
+    });
 
     const successText = `✅ *KONSER BERHASIL DISIMPAN!*
 
-> Konser ID : ${konserRef.id}
+> Konser ID : ${concert.konserID}
 > Nama : ${nama}
 > Tanggal : ${tanggal}
 > Stok : ${stokNum} tiket
