@@ -747,12 +747,10 @@ case 'help': {
 > \`.confirm_setup\`
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-2. *MANAJEMEN ROLE*
-> \`.addrole\` [nomor] [role]
-> \`.removerole\` [nomor]
-> \`.getrole\` [nomor]
-> \`.addadmin\` [nomor]
-> \`.rmadmin\` [nomor]
+2. *MANAJEMEN ADMIN (LOCAL)*
+> \`.addadmin\` [nomor] - Tambah admin (simpan ke db/admin.json)
+> \`.rmadmin\` [nomor] - Hapus admin dari list
+> \`.listusers\` - Lihat semua owner & admin
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
 3. *LIHAT TRANSAKSI*
@@ -769,7 +767,7 @@ case 'help': {
 > \`.menu\`
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈`;
 
-    } else if (userRole === 'admin') {
+    } else if (isAdmin) {
       // ADMIN COMMANDS
       helpText = `👨‍💼 *ADMIN COMMANDS*
 > Kelola tiket & verifikasi pembayaran
@@ -779,6 +777,7 @@ case 'help': {
 > \`.show\` [refID]
 > \`.acc\` [refID]
 > \`.reject\` [refID] [alasan]
+> \`.scan\` [ticketID] [code]
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
 2. *LIHAT TRANSAKSI*
@@ -1441,7 +1440,7 @@ case 'lihat_bukti': {
 
 case 'acc':
 case 'approve_bukti': {
-  console.log(color(`🔍 [ACC_DEBUG] Command received from: ${m.sender} | isAdmin: ${isAdmin} | userRole: ${userRole}`, 'magenta'));
+  console.log(color(`🔍 [ACC_DEBUG] Command received from: ${m.sender} | isAdmin: ${isAdmin} | isOwner: ${isOwner}`, 'magenta'));
   
   if (!isAdmin) return m.reply('❌ Hanya admin/owner yang bisa!');
   
