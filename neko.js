@@ -2158,8 +2158,14 @@ case 'addadmin': {
     const firestore = admin.firestore();
     const targetJid = targetPhone.replace(/[^0-9]/g, '') + '@s.whatsapp.net';
     
+    // Normalize phone number: 08xxx -> 628xxx
+    let normalizedPhone = targetPhone.replace(/[^0-9]/g, '');
+    if (normalizedPhone.startsWith('0')) {
+      normalizedPhone = '62' + normalizedPhone.slice(1);
+    }
+    
     await firestore.collection('users').doc(targetJid).set({
-      phone: targetPhone.replace(/[^0-9]/g, ''),
+      phone: normalizedPhone,
       role: 'admin',
       updatedAt: new Date(),
       updatedBy: m.sender
@@ -2167,7 +2173,7 @@ case 'addadmin': {
     
     m.reply(`✅ Berhasil ditambahkan sebagai admin!
 
-> Nomor : ${targetPhone}
+> Nomor : ${normalizedPhone}
 > Role : ADMIN
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈`);
 
