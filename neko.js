@@ -1336,7 +1336,7 @@ Silahkan tunggu konfirmasi dari kami.
 > Dari : ${userName} (${phoneNumber})
 > Jumlah : Rp ${jumlah.toLocaleString('id-ID')}
 > Catatan : ${catatan}
-> Waktu : ${new Date().toLocaleString('id-ID')}
+> Waktu : ${moment.tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss')} WIB
 ┈ׅ──ۄ─꯭─꯭──────꯭ׄ──ׅ┈
 
 📎 *Bukti transfer terlampir di atas*
@@ -1538,7 +1538,7 @@ case 'approve_bukti': {
 > Jumlah : Rp ${data.jumlah.toLocaleString('id-ID')}
 > Status : ${data.status.toUpperCase()}
 > Approved oleh : ${data.approvedBy || 'Unknown'}
-> Approved pada : ${data.approvedAt ? new Date(data.approvedAt).toLocaleString('id-ID') : 'Unknown'}
+> Approved pada : ${data.approvedAt ? moment(data.approvedAt).tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss') + ' WIB' : 'Unknown'}
 ┈ׅ──ۄ─꯭─꯭──────꯭ׄ──ׅ┈
 
 ❌ *Tidak bisa approve lagi - duplikat tiket tidak diperbolehkan!*`);
@@ -1878,7 +1878,7 @@ _Tiket tidak terdaftar di sistem!_`);
 > ID : ${ticketID}
 > Pembeli : ${ticketData.buyerName} (${ticketData.buyerPhone})
 > Konser : ${ticketData.konser}
-> Scan Waktu : ${new Date(ticketData.scannedAt.toDate()).toLocaleString('id-ID')}
+> Scan Waktu : ${moment(ticketData.scannedAt.toDate()).tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss')} WIB
 
 _Tiket sudah digunakan - kemungkinan duplikat!_`);
     }
@@ -1927,7 +1927,7 @@ _Kode tidak cocok - kemungkinan tiket palsu!_`);
 > Pembeli : ${ticketData.buyerName} (${ticketData.buyerPhone})
 > Konser : ${ticketData.konser}
 > Harga : Rp ${ticketData.harga.toLocaleString('id-ID')}
-> Jam Scan : ${new Date().toLocaleString('id-ID')}
+> Jam Scan : ${moment.tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss')} WIB
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
 🎫 Tiket valid & sudah diverifikasi`;
@@ -2020,7 +2020,7 @@ Anda telah ditambahkan sebagai admin di Atlanticket Bot!
 
 > Role : ${role.toUpperCase()}
 > Disetujui oleh : ${m.pushName || 'Owner'}
-> Waktu : ${new Date().toLocaleString('id-ID')}
+> Waktu : ${moment.tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss')} WIB
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
 📋 *COMMAND ADMIN YANG TERSEDIA:*
@@ -2071,7 +2071,7 @@ Role admin Anda telah dihapus.
 
 > Role Sekarang : USER
 > Diubah oleh : ${m.pushName || 'Owner'}
-> Waktu : ${new Date().toLocaleString('id-ID')}
+> Waktu : ${moment.tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss')} WIB
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
 Anda sekarang memiliki akses sebagai user biasa.`;
@@ -2144,7 +2144,7 @@ Anda telah ditambahkan sebagai admin di AtlanTicket Bot!
 
 > Role : ADMIN
 > Disetujui oleh : ${m.pushName || 'Owner'}
-> Waktu : ${new Date().toLocaleString('id-ID')}
+> Waktu : ${moment.tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss')} WIB
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
 📋 *COMMAND ADMIN YANG TERSEDIA:*
@@ -2192,7 +2192,7 @@ Akses admin Anda telah dicabut.
 
 > Role Sekarang : USER
 > Dicabut oleh : ${m.pushName || 'Owner'}
-> Waktu : ${new Date().toLocaleString('id-ID')}
+> Waktu : ${moment.tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss')} WIB
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
 Anda sekarang memiliki akses sebagai user biasa.`;
