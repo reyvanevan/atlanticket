@@ -642,7 +642,6 @@ function saveDatabase(db) {
     // ============= HELPER FUNCTIONS UNTUK STRUK =============
     const generateTicketStruk = (data) => {
       const { invoice, concert, price, buyerName, buyerPhone, status } = data;
-      const moment = require('moment-timezone');
       const txDate = moment.tz('Asia/Jakarta').format('dddd, DD MMMM YYYY');
       const txTime = moment.tz('Asia/Jakarta').format('HH:mm:ss');
       
@@ -691,7 +690,6 @@ function saveDatabase(db) {
 
     const sendNotifToOwner = (data) => {
       const { invoice, concert, price, buyerName, buyerPhone, status } = data;
-      const moment = require('moment-timezone');
       const txDate = moment.tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss');
       
       if (status === 'success') {
@@ -1558,7 +1556,6 @@ case 'approve_bukti': {
     const userJid = data.userJid;
     
     // Generate QR code tiket (2 = Tiket, 13 digit total)
-    const moment = require('moment-timezone');
     const ticketTimestamp = Math.floor(Date.now() / 1000).toString().slice(-12);
     const ticketID = `2${ticketTimestamp}`;
     
