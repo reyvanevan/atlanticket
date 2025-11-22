@@ -801,30 +801,30 @@ case 'help': {
     
     if (isOwner) {
       // DEVELOPER/OWNER COMMANDS
-      helpText = `👨‍💻 *DEVELOPER COMMANDS*
+      helpText = `*DEVELOPER COMMANDS*
 > Akses penuh ke semua fitur
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-1. *🎤 MANAJEMEN KONSER*
+1. *MANAJEMEN KONSER*
 > \`.setup_konser\` [nama]|[tgl]|[jam]|[lokasi]|[harga]|[stok]|[deskripsi]
 > \`.confirm_setup\` - Simpan konser
 > \`.menu\` - Lihat konser aktif
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-2. 👨‍💼 *MANAJEMEN ADMIN*
+2. *MANAJEMEN ADMIN*
 > \`.addadmin\` [nomor] - Tambah admin
 > \`.rmadmin\` [nomor] - Hapus admin
 > \`.listusers\` - Lihat semua owner & admin
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-3. 🎫 *MANAJEMEN TIKET*
+3. *MANAJEMEN TIKET*
 > \`.acc\` [refID] - Approve pembayaran & generate tiket
 > \`.reject\` [refID] [alasan] - Tolak pembayaran
 > \`.scan\` [ticketID] [code] - Scan tiket masuk
 > \`.stok\` - Lihat stok tiket & analytics
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-4. 💰 *MANAJEMEN PEMBAYARAN*
+4. *MANAJEMEN PEMBAYARAN*
 > \`.show\` [refID] - Lihat detail pembayaran
 > \`.riwayat\` - Lihat semua transaksi
 > \`.riwayat pending\` - Lihat pending
@@ -833,25 +833,25 @@ case 'help': {
 > \`.riwayat\` [nomor_hp] - Lihat user tertentu
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-5. ⚙️ *SISTEM*
+5. *SISTEM*
 > \`.ping\` - Cek status bot
 > \`.setbot\` [key] [value] - Setting grup
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈`;
 
     } else if (isAdmin) {
       // ADMIN COMMANDS
-      helpText = `👨‍💼 *ADMIN COMMANDS*
+      helpText = `*ADMIN COMMANDS*
 > Kelola tiket & verifikasi pembayaran
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-1. ✅ *VERIFIKASI PEMBAYARAN*
+1. *VERIFIKASI PEMBAYARAN*
 > \`.show\` [refID] - Lihat detail pembayaran
 > \`.acc\` [refID] - Approve & generate tiket
 > \`.reject\` [refID] [alasan] - Tolak pembayaran
 > \`.scan\` [ticketID] [code] - Scan tiket saat masuk
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-2. 📊 *LAPORAN & ANALYTICS*
+2. *LAPORAN & ANALYTICS*
 > \`.stok\` - Lihat stok tiket & penjualan
 > \`.riwayat\` - Lihat semua transaksi
 > \`.riwayat pending\` - Lihat pending
@@ -860,24 +860,24 @@ case 'help': {
 > \`.riwayat\` [nomor_hp] - Lihat user tertentu
 ┈ׅ──��─꯭─꯭──────꯭ׄ──ׅ┈
 
-3. 🔍 *INFO*
+3. *INFO*
 > \`.menu\` - Lihat konser aktif
 > \`.ping\` - Cek status bot
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-⚠️ *BATASAN ADMIN:*
-> ❌ Tidak bisa order tiket
-> ❌ Tidak bisa checkout
-> ❌ Tidak bisa upload bukti transfer
+*BATASAN ADMIN:*
+> - Tidak bisa order tiket
+> - Tidak bisa checkout
+> - Tidak bisa upload bukti transfer
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈`;
 
     } else {
       // USER/REGULAR COMMANDS
-      helpText = `👤 *USER COMMANDS*
+      helpText = `*USER COMMANDS*
 > Pesan dan beli tiket konser
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-1. 🎫 *PEMBELIAN TIKET*
+1. *PEMBELIAN TIKET*
 > \`.menu\` - Lihat konser aktif
 > \`.order\` - Lihat detail & memesan
 > \`.payment\` - Lihat info pembayaran
@@ -885,37 +885,37 @@ case 'help': {
 > \`.checkout\` - (alias: .pay, .bayar, .pembayaran)
 ┈ׅ──��─꯭─꯭──────꯭ׄ──ׅ┈
 
-2. 📜 *LIHAT RIWAYAT*
+2. *LIHAT RIWAYAT*
 > \`.riwayat\` - Lihat riwayat pembayaran Anda
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-3. ⚙️ *SISTEM*
+3. *SISTEM*
 > \`.ping\` - Cek status bot
 > \`.help\` - Tampilkan bantuan ini
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-💡 *CATATAN PENTING:*
-> ✅ Command hanya bekerja di private chat
-> ✅ Screenshot bukti transfer harus jelas & lengkap
-> ✅ Verifikasi maksimal 5 menit
+*CATATAN PENTING:*
+> - Command hanya bekerja di private chat
+> - Screenshot bukti transfer harus jelas & lengkap
+> - Verifikasi maksimal 5 menit
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈`;
     }
     
     m.reply(helpText);
   } catch (err) {
-    m.reply(`❌ Error: ${err.message}`);
+    m.reply(`Error: ${err.message}`);
   }
   break;
 }
 
 case 'order': {
-  if (isAdmin && !isOwner) return m.reply('❌ Admin tidak bisa order tiket! Hanya user biasa.');
+  if (isAdmin && !isOwner) return m.reply('Admin tidak bisa order tiket! Hanya user biasa.');
   
   try {
     const activeKonser = concertManager.getActive();
     
     if (!activeKonser) {
-      return m.reply('❌ Belum ada konser tersedia!');
+      return m.reply('Belum ada konser tersedia!');
     }
 
     // Fetch admin contact dari local storage
