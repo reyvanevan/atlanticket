@@ -2204,32 +2204,29 @@ case 'rmadmin': {
   if (!isDeveloper) return m.reply('❌ Hanya Developer yang bisa!');
   
   if (!text) return m.reply('Format: .rmadmin [nomor]\nContoh: .rmadmin 6285871756001');
-  
+
   const targetPhone = text.trim();
   
   try {
     const firestore = admin.firestore();
     const targetJid = targetPhone.replace(/[^0-9]/g, '') + '@s.whatsapp.net';
     
-    await firestore.collection('users').doc(targetJid).update({
-      role: 'user',
-      updatedAt: new Date(),
-      updatedBy: m.sender
-    });
+    // Hapus document dari Firestore
+    await firestore.collection('users').doc(targetJid).delete();
     
-    m.reply(`✅ Berhasil dihapus dari admin!\n\n> Nomor : ${targetPhone}\n> Role : USER`);
+    m.reply(`✅ Berhasil dihapus dari admin!\n\n> Nomor : ${targetPhone}\n> Status : DIHAPUS DARI DATABASE`);
 
     // Send notification to target user
     const notifMsg = `⚠️ *NOTIFIKASI PERUBAHAN AKSES*
 
-Akses admin Anda telah dicabut.
+Akses admin Anda telah dicabut dan dihapus dari database.
 
-> Role Sekarang : USER
+> Status : DIHAPUS
 > Dicabut oleh : ${m.pushName || 'Owner'}
 > Waktu : ${moment.tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss')} WIB
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-Anda sekarang memiliki akses sebagai user biasa.`;
+Akses admin telah dihapus sepenuhnya. Untuk akses kembali, hubungi owner.`;
 
     await client.sendMessage(targetJid, { text: notifMsg });
   } catch (err) {
