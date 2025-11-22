@@ -2130,18 +2130,18 @@ case 'stok': {
     const persentaseSisa = totalStokAwal > 0 ? ((sisaStok / totalStokAwal) * 100).toFixed(1) : 0;
     
     // Build response text
-    let stokText = `*STOK TIKET ${activeKonser.nama.toUpperCase()}*
+    let stokText = `📊 *STOK TIKET ${activeKonser.nama.toUpperCase()}*
 
 *STATUS KESELURUHAN:*
-> Stok Awal : ${totalStokAwal} tiket
-> Terjual : ${totalTerjual} tiket (${persentaseTerjual}%)
-> Sisa Stok : ${sisaStok} tiket (${persentaseSisa}%)
-> Pending/Approval : ${pendingTiket} bukti
+> Total Stok Awal : ${totalStokAwal} tiket
+> ✅ Terjual : ${totalTerjual} tiket (${persentaseTerjual}%)
+> 📦 Sisa Stok : ${sisaStok} tiket (${persentaseSisa}%)
+> ⏳ Pending/Approval : ${pendingTiket} bukti
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
 *PENGGUNAAN TIKET:*
-> Belum Digunakan : ${totalBelumDiScan} tiket
-> Sudah Digunakan : ${totalDiScan} tiket
+> 🔓 Belum Digunakan : ${totalBelumDiScan} tiket
+> ✔️ Sudah Digunakan : ${totalDiScan} tiket
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
 *DETAIL PER KONSER:*
@@ -2155,8 +2155,8 @@ case 'stok': {
       stokText += `\n${no}. *${konser}*
 > Harga : Rp ${data.harga.toLocaleString('id-ID')}
 > Total Terjual : ${data.total} tiket
-> Digunakan : ${data.diScan} (${persentaseDipakai}%)
-> Belum Digunakan : ${data.belumDiScan}
+> ✅ Digunakan : ${data.diScan} (${persentaseDipakai}%)
+> ⏳ Belum Digunakan : ${data.belumDiScan}
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈`;
       no++;
     });
@@ -2165,11 +2165,11 @@ case 'stok': {
     stokText += `
 
 *INFORMASI:*
-> Stok Awal = Total tiket yang di-setup dari awal
-> Terjual = Jumlah tiket yang sudah disetujui (stokAwal - sisaStok)
-> Sisa Stok = Tiket yang belum terjual
-> Digunakan = Tiket yang sudah di-scan saat entry
-> Pending/Approval = Bukti transfer dalam review
+📌 Stok Awal = Total tiket yang di-setup dari awal
+📌 Terjual = Tiket yang sudah dikirim ke customer
+📌 Sisa Stok = Tiket yang belum terjual (ADMIN ONLY)
+📌 Digunakan = Tiket yang sudah di-scan saat masuk
+📌 Pending/Approval = Bukti transfer dalam review
 
 _Update: ${moment().tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss')} WIB_`;
     
@@ -2205,32 +2205,41 @@ _Update: ${moment().tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss')} WIB_`;
           return new Date(b.createdAt) - new Date(a.createdAt);
         });
         
-        let riwayatText = `*RIWAYAT BUKTI TRANSFER*
-\nTotal : ${sorted.length} data (urut by status, pending first)
+        let riwayatText = `📋 *RIWAYAT BUKTI TRANSFER*
+
+> Total : ${sorted.length} data (urut by status, pending first)
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
 `;
         
         let no = 1;
         sorted.forEach(data => {
-          const getEmoji = (status) => status === 'approved' ? '✓' : status === 'pending' ? '⏳' : '✗';
+          const getEmoji = (status) => status === 'approved' ? '✅' : status === 'pending' ? '⏳' : '❌';
           const getStatusText = (status) => status === 'approved' ? 'Disetujui' : status === 'pending' ? 'Menunggu' : 'Ditolak';
-          riwayatText += `${no}. ${getEmoji(data.status)} *${data.refID}*
+          let itemText = `${no}. ${getEmoji(data.status)} *${data.refID}*
 > User : ${data.userName} (${data.userPhone})
 > Harga : Rp ${data.jumlah.toLocaleString('id-ID')}
-> Status : \`${getStatusText(data.status)}\`
-> Dibuat : ${new Date(data.createdAt).toLocaleString('id-ID')}
+> Dibuat : ${new Date(data.createdAt).toLocaleString('id-ID')}`;
+          
+          if (data.status === 'approved' && data.approvedAt) {
+            const approvedByPhone = data.approvedBy ? data.approvedBy.split('@')[0] : '';
+            itemText += `\n> Approved : ${new Date(data.approvedAt).toLocaleString('id-ID')} (${approvedByPhone})`;
+          } else if (data.status === 'rejected' && data.rejectedAt) {
+            const rejectedByPhone = data.rejectedBy ? data.rejectedBy.split('@')[0] : '';
+            itemText += `\n> Rejected : ${new Date(data.rejectedAt).toLocaleString('id-ID')} (${rejectedByPhone})`;
+          }
+          
+          riwayatText += itemText + `
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
-
 `;
           no++;
         });
         
         riwayatText += `*Gunakan:*
-.riwayat pending - Lihat pending
-.riwayat acc - Lihat approved
-.riwayat reject - Lihat rejected
-.riwayat [nomor_hp] - Lihat user tertentu`;
+\`.riwayat pending\` - Lihat pending
+\`.riwayat acc\` - Lihat approved
+\`.riwayat reject\` - Lihat rejected
+\`.riwayat [nomor_hp]\` - Lihat user tertentu`;
         
         return m.reply(riwayatText);
       }
@@ -2249,23 +2258,32 @@ _Update: ${moment().tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss')} WIB_`;
         // Sort by time (newest first)
         filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         
-        const getEmoji = (status) => status === 'approved' ? '✓' : status === 'pending' ? '⏳' : '✗';
+        const getEmoji = (status) => status === 'approved' ? '✅' : status === 'pending' ? '⏳' : '❌';
         const getStatusText = (status) => status === 'approved' ? 'Disetujui' : status === 'pending' ? 'Menunggu' : 'Ditolak';
-        let riwayatText = `*RIWAYAT BUKTI TRANSFER - ${getStatusText(targetStatus).toUpperCase()}*
-\nTotal : ${filtered.length} data
+        let riwayatText = `📋 *RIWAYAT BUKTI TRANSFER - ${getStatusText(targetStatus).toUpperCase()}*
+
+> Total : ${filtered.length} data
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
 `;
         
         let no = 1;
         filtered.forEach(data => {
-          riwayatText += `${no}. ${getEmoji(data.status)} *${data.refID}*
+          let itemText = `${no}. ${getEmoji(data.status)} *${data.refID}*
 > User : ${data.userName} (${data.userPhone})
 > Harga : Rp ${data.jumlah.toLocaleString('id-ID')}
-> Status : \`${getStatusText(data.status)}\`
-> Dibuat : ${new Date(data.createdAt).toLocaleString('id-ID')}
+> Dibuat : ${new Date(data.createdAt).toLocaleString('id-ID')}`;
+          
+          if (data.status === 'approved' && data.approvedAt) {
+            const approvedByPhone = data.approvedBy ? data.approvedBy.split('@')[0] : '';
+            itemText += `\n> Approved : ${new Date(data.approvedAt).toLocaleString('id-ID')} (${approvedByPhone})`;
+          } else if (data.status === 'rejected' && data.rejectedAt) {
+            const rejectedByPhone = data.rejectedBy ? data.rejectedBy.split('@')[0] : '';
+            itemText += `\n> Rejected : ${new Date(data.rejectedAt).toLocaleString('id-ID')} (${rejectedByPhone})`;
+          }
+          
+          riwayatText += itemText + `
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
-
 `;
           no++;
         });
@@ -2291,7 +2309,7 @@ _Update: ${moment().tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss')} WIB_`;
         });
         
         let totalSpent = 0;
-        let riwayatText = `*RIWAYAT TRANSAKSI USER*
+        let riwayatText = `📋 *RIWAYAT TRANSAKSI USER*
 
 Nomor : ${filter}
 Total : ${filtered.length} transaksi
@@ -2300,14 +2318,22 @@ Total : ${filtered.length} transaksi
 `;
         
         const getEmoji = (status) => status === 'approved' ? '✅' : status === 'pending' ? '⏳' : '❌';
-        const getStatusText = (status) => status === 'approved' ? 'Disetujui' : status === 'pending' ? 'Menunggu' : 'Ditolak';
         let no = 1;
         filtered.forEach(data => {
           totalSpent += data.jumlah;
-          riwayatText += `${no}. ${getEmoji(data.status)} *${data.refID}*
+          let itemText = `${no}. ${getEmoji(data.status)} *${data.refID}*
 > Harga : Rp ${data.jumlah.toLocaleString('id-ID')}
-> Status : \`${getStatusText(data.status)}\`
-> Dibuat : ${new Date(data.createdAt).toLocaleString('id-ID')}
+> Dibuat : ${new Date(data.createdAt).toLocaleString('id-ID')}`;
+          
+          if (data.status === 'approved' && data.approvedAt) {
+            const approvedByPhone = data.approvedBy ? data.approvedBy.split('@')[0] : '';
+            itemText += `\n> Approved : ${new Date(data.approvedAt).toLocaleString('id-ID')} (${approvedByPhone})`;
+          } else if (data.status === 'rejected' && data.rejectedAt) {
+            const rejectedByPhone = data.rejectedBy ? data.rejectedBy.split('@')[0] : '';
+            itemText += `\n> Rejected : ${new Date(data.rejectedAt).toLocaleString('id-ID')} (${rejectedByPhone})`;
+          }
+          
+          riwayatText += itemText + `
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 `;
           no++;
@@ -2345,7 +2371,7 @@ Total : ${filtered.length} transaksi
         return m.reply('Anda belum memiliki riwayat transaksi apapun');
       }
       
-      let riwayatText = `*RIWAYAT TRANSAKSI SAYA*
+      let riwayatText = `📋 *RIWAYAT TRANSAKSI SAYA*
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
 `;
@@ -2354,7 +2380,7 @@ Total : ${filtered.length} transaksi
       if (userTickets.length > 0) {
         const sorted = userTickets.slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         
-        riwayatText += `*TIKET SAYA* (${sorted.length})
+        riwayatText += `🎫 *TIKET SAYA* (${sorted.length})
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
 `;
@@ -2368,12 +2394,15 @@ Total : ${filtered.length} transaksi
 > Konser : ${data.konser}
 > Harga : Rp ${data.harga.toLocaleString('id-ID')}
 > Status : \`${statusText}\`
-> Dibeli : ${new Date(data.approvedAt).toLocaleString('id-ID')}
-┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
-
-`;
+> Dibeli : ${new Date(data.approvedAt).toLocaleString('id-ID')}`;
+          if (idx < sorted.length - 1) {
+            riwayatText += `\n`;
+          }
         });
-        riwayatText += `*Total Tiket : Rp ${totalTicketSpent.toLocaleString('id-ID')}*\n\n`;
+        riwayatText += `
+┈ׅ──ۄ─꯭─꯭──────꯭��ܽ──ׅ┈
+
+*Total Tiket : Rp ${totalTicketSpent.toLocaleString('id-ID')}*\n\n`;
       }
       
       // Show bukti_transfer if any
@@ -2387,7 +2416,7 @@ Total : ${filtered.length} transaksi
           return new Date(b.createdAt) - new Date(a.createdAt);
         });
         
-        riwayatText += `*BUKTI TRANSFER* (${sorted.length})
+        riwayatText += `💳 *BUKTI TRANSFER* (${sorted.length})
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
 `;
@@ -2404,12 +2433,14 @@ Total : ${filtered.length} transaksi
           if (data.catatan) {
             riwayatText += `\n> Catatan : ${data.catatan}`;
           }
-          riwayatText += `
-┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
-
-`;
+          if (idx < sorted.length - 1) {
+            riwayatText += `\n`;
+          }
         });
-        riwayatText += `*Total Transfer : Rp ${totalBuktiSpent.toLocaleString('id-ID')}*`;
+        riwayatText += `
+┈ׅ──ۄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+*Total Transfer : Rp ${totalBuktiSpent.toLocaleString('id-ID')}*`;
       }
       
       m.reply(riwayatText);
