@@ -2668,16 +2668,29 @@ FILES GENERATED:
     
     console.log(`✅ CSV files generated at:\n- ${ticketsPath}\n- ${buktiPath}`);
     
-    // Send both files
-    await client.sendFile(from, ticketsPath, 'tickets.csv', '📋 *TIKET DATA*\n\nFile CSV berisi semua data tiket dengan detail lengkap');
+    // Send tickets CSV
+    const ticketsBuffer = fs.readFileSync(ticketsPath);
+    client.sendMessage(from, {
+      document: ticketsBuffer,
+      fileName: 'tickets.csv',
+      mimetype: 'text/csv',
+      caption: '📋 *TIKET DATA*\n\nFile CSV berisi semua data tiket dengan detail lengkap'
+    }, { quoted: m });
     
-    await sleep(1000);
+    setTimeout(() => {
+      // Send bukti transfer CSV
+      const buktiBuffer = fs.readFileSync(buktiPath);
+      client.sendMessage(from, {
+        document: buktiBuffer,
+        fileName: 'bukti_transfer.csv',
+        mimetype: 'text/csv',
+        caption: '💳 *BUKTI TRANSFER DATA*\n\nFile CSV berisi semua data bukti transfer dengan detail lengkap'
+      }, { quoted: m });
+    }, 1500);
     
-    await client.sendFile(from, buktiPath, 'bukti_transfer.csv', '💳 *BUKTI TRANSFER DATA*\n\nFile CSV berisi semua data bukti transfer dengan detail lengkap');
-    
-    await sleep(1000);
-    
-    m.reply(`✅ Export berhasil!\n${summaryText}`);
+    setTimeout(() => {
+      m.reply(`✅ Export berhasil!\n${summaryText}`);
+    }, 3000);
     
   } catch (err) {
     console.error('Export error:', err);
