@@ -736,7 +736,11 @@ case 'help': {
 > \`.riwayat\` [nomor_hp]
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-4. *SISTEM*
+4. *STOK & ANALYTICS*
+> \`.stok\` - Lihat stok tiket & penjualan
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+5. *SISTEM*
 > \`.setbot\` [key] [value]
 > \`.ping\`
 > \`.menu\`
@@ -2096,6 +2100,106 @@ Akses admin telah dihapus sepenuhnya. Untuk akses kembali, hubungi owner.`;
         })
       }
       break
+      
+case 'stok': {
+  if (!isAdmin) return m.reply('❌ Hanya admin/owner yang bisa melihat stok!');
+  
+  try {
+    const firestore = admin.firestore();
+    
+    // Get all tickets
+    const ticketsSnapshot = await firestore.collection('tickets').get();
+    
+    if (ticketsSnapshot.empty) {
+      return m.reply('❌ Belum ada data tiket di sistem');
+    }
+    
+    let totalTiket = 0;
+    let totalTerjual = 0;
+    let totalDiScan = 0;
+    let totalBelumDiScan = 0;
+    let perKonserData = {};
+    
+    // Parse semua tiket
+    ticketsSnapshot.forEach(doc => {
+      const ticket = doc.data();
+      totalTiket++;
+      totalTerjual++; // Semua tiket di collection tickets = sudah terjual
+      
+      if (ticket.status === 'used') {
+        totalDiScan++;
+      } else if (ticket.status === 'aktif') {
+        totalBelumDiScan++;
+      }
+      
+      // Group by konser
+      if (!perKonserData[ticket.konser]) {
+        perKonserData[ticket.konser] = {
+          total: 0,
+          diScan: 0,
+          belumDiScan: 0,
+          harga: ticket.harga || 0
+        };
+      }
+      perKonserData[ticket.konser].total++;
+      if (ticket.status === 'used') {
+        perKonserData[ticket.konser].diScan++;
+      } else {
+        perKonserData[ticket.konser].belumDiScan++;
+      }
+    });
+    
+    // Get pending & approved payments untuk lihat stok yang akan datang
+    const buktiSnapshot = await firestore.collection('bukti_transfer')
+      .where('status', 'in', ['pending', 'approved'])
+      .get();
+    
+    let pendingTiket = buktiSnapshot.size;
+    
+    // Build response text
+    let stokText = `📊 *STOK TIKET UMBandung Fest*
+
+*STATUS KESELURUHAN:*
+> Total Terjual : ${totalTerjual} tiket
+> Sudah Digunakan : ${totalDiScan} tiket
+> Belum Digunakan : ${totalBelumDiScan} tiket
+> Pending/Approval : ${pendingTiket} bukti
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+*DETAIL PER KONSER:*\n`;
+    
+    let no = 1;
+    Object.keys(perKonserData).forEach(konser => {
+      const data = perKonserData[konser];
+      const persentaseDipakai = ((data.diScan / data.total) * 100).toFixed(1);
+      
+      stokText += `\n${no}. *${konser}*
+> Harga : Rp ${data.harga.toLocaleString('id-ID')}
+> Total : ${data.total} tiket
+> ✅ Digunakan : ${data.diScan} (${persentaseDipakai}%)
+> ⏳ Belum Digunakan : ${data.belumDiScan}
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈`;
+      no++;
+    });
+    
+    // Add info section
+    stokText += `
+
+*INFORMASI:*
+📌 Tiket "Digunakan" = Sudah di-scan saat masuk
+📌 Tiket "Belum Digunakan" = Sudah terjual tapi belum masuk
+📌 "Pending/Approval" = Bukti transfer dalam review
+
+_Update: ${moment().tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss')} WIB_`;
+    
+    return m.reply(stokText);
+    
+  } catch (err) {
+    console.error('Error:', err);
+    m.reply(`❌ Error: ${err.message}`);
+  }
+  break;
+}
        
     case 'riwayat': {
   try {
