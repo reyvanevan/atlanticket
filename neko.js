@@ -110,6 +110,20 @@ const { smsg, tanggal, getTime, isUrl, sleep, clockString, runtime, fetchJson, g
 // Kemudian gunakan fungsi-fungsinya
 //const { getMLBBAccount, updateMLBBAccountStatus, findAvailableAccount } = mlbbHelpers;
 
+// ========== SAVE ADMIN LIST TO FILE ==========
+const saveAdminList = () => {
+  try {
+    const adminFilePath = './db/admin.json';
+    const adminData = { admins: global.admin || [] };
+    fs.writeFileSync(adminFilePath, JSON.stringify(adminData, null, 2));
+    console.log(color(`💾 Admin list saved (${global.admin.length} admins)`, 'green'));
+    return true;
+  } catch (err) {
+    console.error(color(`❌ Error saving admin list: ${err.message}`, 'red'));
+    return false;
+  }
+};
+
 module.exports = client = async (client, m, chatUpdate, store, db_respon_list) => {
   try {
       // Tunggu Baileys load dulu
@@ -205,62 +219,21 @@ const command = cleanBody.replace(prefix, '').trim().split(/ +/).shift().toLower
     const botNumber = await client.decodeJid(client.user.id)
     const isOwner = [botNumber, ...global.owner].map(v => v.replace(/[^0-9]/g, '') + '@s.whatsapp.net').includes(m.sender)
     
-    // ========== REUSABLE ROLE CHECKER FUNCTION ==========
-    const getUserRole = async (jid = m.sender) => {
-      try {
-        const firestore = admin.firestore();
-        // Normalize JID format
-        let normalizedJid = jid;
-        if (!jid.includes('@s.whatsapp.net')) {
-          const phoneOnly = jid.replace(/[^0-9]/g, '');
-          normalizedJid = phoneOnly + '@s.whatsapp.net';
-        }
-        
-        const userDoc = await firestore.collection('users').doc(normalizedJid).get();
-        if (userDoc.exists && userDoc.data().role) {
-          return userDoc.data().role;
-        }
-      } catch (err) {
-        console.log('Warning: Firestore role check failed:', err.message);
-      }
-      return 'user'; // default role
-    };
-    
-    // ========== ROLE SYSTEM FROM FIRESTORE ==========
-    let userRole = 'user'; // default role
-    try {
-      const firestore = admin.firestore();
-      
-      // Extract phone number using same logic as bukti_transfer (yang berhasil!)
-      // Priority 1: m.key.senderPn jika ada
-      let phoneNumber = null;
-      if (m.key?.senderPn) {
-        phoneNumber = m.key.senderPn.split('@')[0];
-      }
-      
-      // Priority 2: fallback ke m.sender (ini yang selalu berhasil!)
-      if (!phoneNumber && m.sender) {
-        phoneNumber = m.sender.split('@')[0];
-      }
-      
-      // Build JID untuk lookup di Firestore
-      const lookupJid = phoneNumber + '@s.whatsapp.net';
-      
-      const userDoc = await firestore.collection('users').doc(lookupJid).get();
-      if (userDoc.exists) {
-        userRole = userDoc.data().role || 'user';
-        console.log(color(`✅ [ROLE_CHECK] ${lookupJid} => ${userRole}`, 'green'));
-      } else {
-        console.log(color(`⚠️ [ROLE_CHECK] ${lookupJid} => NOT_FOUND (default: user)`, 'yellow'));
-      }
-    } catch (err) {
-      console.log(color(`[ROLE_CHECK_ERROR] ${err.message}`, 'red'));
+    // ========== LOCAL ADMIN CHECK (FAST & RELIABLE) ==========
+    // Extract phone number
+    let phoneNumber = null;
+    if (m.key?.senderPn) {
+      phoneNumber = m.key.senderPn.split('@')[0];
+    }
+    if (!phoneNumber && m.sender) {
+      phoneNumber = m.sender.split('@')[0];
     }
     
-    const isAdmin = userRole === 'admin' || isOwner; // Admin + Owner
+    // Check if in local admin or owner list
+    const isAdmin = (phoneNumber && (global.admin?.includes(phoneNumber) || global.owner?.includes(phoneNumber))) || isOwner;
     const isDeveloper = isOwner; // Only Owner (Developer)
     
-    console.log(color(`🔐 [AUTH] Sender: ${m.sender.split('@')[0]} | Role: ${userRole} | isAdmin: ${isAdmin} | isOwner: ${isOwner}`, 'cyan'));
+    console.log(color(`🔐 [AUTH] Sender: ${phoneNumber} | isAdmin: ${isAdmin} | isOwner: ${isOwner}`, 'cyan'));
     
     const sender = m.isGroup ? (m.key.participant ? m.key.participant : m.participant) : m.key.remoteJid
     
@@ -884,23 +857,18 @@ case 'order': {
     if (konserArray.length === 1) {
       const konser = konserArray[0];
       
-      // Fetch admin contact dari Firestore
+      // Fetch admin contact dari local storage
       let adminInfo = '';
       try {
-        const adminsSnapshot = await firestore.collection('users').where('role', '==', 'admin').get();
-        if (!adminsSnapshot.empty) {
+        if (global.admin && global.admin.length > 0) {
           adminInfo = '\n\n👨‍💼 *HUBUNGI ADMIN:*';
-          let adminCount = 1;
-          adminsSnapshot.forEach(doc => {
-            const adminData = doc.data();
-            const adminPhone = adminData.phone || doc.id.split('@')[0];
-            const adminName = adminData.name || 'Admin ' + adminCount;
-            adminInfo += `\n${adminCount}. ${adminName}\n> wa.me/${adminPhone}`;
-            adminCount++;
+          global.admin.forEach((adminPhone, index) => {
+            const adminName = `Admin ${index + 1}`;
+            adminInfo += `\n${index + 1}. ${adminName}\n> wa.me/${adminPhone}`;
           });
         }
       } catch (err) {
-        console.log('Warning: Gagal fetch admin:', err.message);
+        console.log('Warning: Gagal display admin:', err.message);
       }
       
       const orderText = `📋 *DETAIL TIKET KONSER*
@@ -957,24 +925,19 @@ case 'pembayaran': {
   try {
     const firestore = admin.firestore();
     
-    // Fetch admin contact from Firestore
+    // Fetch admin contact from local storage
     let adminInfo = '';
     try {
-      const adminsSnapshot = await firestore.collection('users').where('role', '==', 'admin').get();
-      if (!adminsSnapshot.empty) {
+      if (global.admin && global.admin.length > 0) {
         adminInfo = '\n👨‍💼 *HUBUNGI ADMIN UNTUK BANTUAN LAIN:*';
-        let adminCount = 1;
-        adminsSnapshot.forEach(doc => {
-          const adminData = doc.data();
-          const adminPhone = adminData.phone || doc.id.split('@')[0];
-          const adminName = adminData.name || 'Admin ' + adminCount;
-          adminInfo += `\n${adminCount}. ${adminName}\n> Nomor: ${adminPhone}`;
-          adminCount++;
+        global.admin.forEach((adminPhone, index) => {
+          const adminName = `Admin ${index + 1}`;
+          adminInfo += `\n${index + 1}. ${adminName}\n> Nomor: ${adminPhone}`;
         });
         adminInfo += '\n┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈';
       }
     } catch (err) {
-      console.log('Warning: Gagal fetch admin dari Firestore:', err.message);
+      console.log('Warning: Gagal display admin:', err.message);
     }
     
     const paymentText = `💳 *INFORMASI PEMBAYARAN TIKET*
@@ -1374,28 +1337,27 @@ Silahkan tunggu konfirmasi dari kami.
       sendPromises.push(sendNotification(ownJid, own, 'owner'));
     }
     
-    // Query admin dari Firestore dan kirim parallel
+    // Send to local admin list
     try {
-      const adminSnapshot = await firestore.collection('users')
-        .where('role', '==', 'admin')
-        .get();
-      
-      console.log(`📋 Found ${adminSnapshot.size} admin(s) in Firestore`);
-      
-      for (const adminDoc of adminSnapshot.docs) {
-        const adminJid = adminDoc.id; // JID format: 6289xxx@s.whatsapp.net
-        const adminPhone = adminJid.split('@')[0];
+      if (global.admin && global.admin.length > 0) {
+        console.log(`📋 Found ${global.admin.length} admin(s) in local storage`);
         
-        // Skip jika sudah ada di owner list
-        if (global.owner.includes(adminPhone)) {
-          console.log(`⏭️ Skip admin ${adminPhone} (already in owner list)`);
-          continue;
+        for (const adminPhone of global.admin) {
+          const adminJid = adminPhone + '@s.whatsapp.net';
+          
+          // Skip jika sudah ada di owner list
+          if (global.owner.includes(adminPhone)) {
+            console.log(`⏭️ Skip admin ${adminPhone} (already in owner list)`);
+            continue;
+          }
+          
+          sendPromises.push(sendNotification(adminJid, adminPhone, 'admin'));
         }
-        
-        sendPromises.push(sendNotification(adminJid, adminPhone, 'admin'));
+      } else {
+        console.log(`⚠️ No admins in local storage`);
       }
     } catch (err) {
-      console.error('Error fetching admins from Firestore:', err.message);
+      console.error('Error sending to admins:', err.message);
     }
     
     // Kirim semua parallel dengan timeout protection
@@ -1980,105 +1942,11 @@ case 'setbot': {
 }
 
 // ========== ROLE MANAGEMENT COMMANDS ==========
-case 'addrole': {
-  if (!isDeveloper) return m.reply('❌ Hanya Developer (Owner) yang bisa!');
-  
-  if (!text) return m.reply('Format: .addrole [nomor] [role]\nRole: admin atau user\nContoh: .addrole 6285871756001 admin');
-  
-  const parts = text.split(' ');
-  const targetPhone = parts[0];
-  const role = parts[1]?.toLowerCase();
-  
-  if (!role || !['admin', 'user'].includes(role)) {
-    return m.reply('❌ Role harus "admin" atau "user"!');
-  }
-  
-  try {
-    const firestore = admin.firestore();
-    const targetJid = targetPhone.replace(/[^0-9]/g, '') + '@s.whatsapp.net';
-    
-    await firestore.collection('users').doc(targetJid).set({
-      phone: targetPhone.replace(/[^0-9]/g, ''),
-      role: role,
-      updatedAt: new Date(),
-      updatedBy: m.sender
-    }, { merge: true });
-    
-    m.reply(`✅ Role berhasil diupdate!
+// ===== REMOVED: .addrole & .removerole commands =====
+// These are replaced by .addadmin & .rmadmin for local storage
+// Commands left as note for future reference
 
-> Nomor : ${targetPhone}
-> Role : ${role.toUpperCase()}
-┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈`);
 
-    // Send notification to target user
-    const notifMsg = `👨‍💼 *NOTIFIKASI AKSES ADMIN*
-
-Anda telah ditambahkan sebagai admin di Atlanticket Bot!
-
-> Role : ${role.toUpperCase()}
-> Disetujui oleh : ${m.pushName || 'Owner'}
-> Waktu : ${moment.tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss')} WIB
-┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
-
-📋 *COMMAND ADMIN YANG TERSEDIA:*
-> \`.show\` [refID] - Lihat bukti transfer
-> \`.acc\` [refID] - Approve pembayaran
-> \`.reject\` [refID] [alasan] - Tolak pembayaran
-> \`.scan\` [ticketID] [code] - Scan tiket masuk
-> \`.riwayat\` - Lihat semua transaksi
-> \`.riwayat pending\` - Lihat yang pending
-> \`.riwayat acc\` - Lihat yang disetujui
-> \`.riwayat reject\` - Lihat yang ditolak
-
-Selamat bertugas! 🎯`;
-
-    await client.sendMessage(targetJid, { text: notifMsg });
-  } catch (err) {
-    m.reply(`❌ Error: ${err.message}`);
-  }
-  break;
-}
-
-case 'removerole': {
-  if (!isDeveloper) return m.reply('❌ Hanya Developer (Owner) yang bisa!');
-  
-  if (!text) return m.reply('Format: .removerole [nomor]\nContoh: .removerole 6285871756001');
-  
-  const targetPhone = text.trim();
-  
-  try {
-    const firestore = admin.firestore();
-    const targetJid = targetPhone.replace(/[^0-9]/g, '') + '@s.whatsapp.net';
-    
-    await firestore.collection('users').doc(targetJid).update({
-      role: 'user',
-      updatedAt: new Date(),
-      updatedBy: m.sender
-    });
-    
-    m.reply(`✅ Role berhasil direset ke user!
-
-> Nomor : ${targetPhone}
-┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈`);
-
-    // Send notification to target user
-    const notifMsg = `⚠️ *NOTIFIKASI PERUBAHAN AKSES*
-
-Role admin Anda telah dihapus.
-
-> Role Sekarang : USER
-> Diubah oleh : ${m.pushName || 'Owner'}
-> Waktu : ${moment.tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss')} WIB
-┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
-
-Anda sekarang memiliki akses sebagai user biasa.`;
-
-    await client.sendMessage(targetJid, { text: notifMsg });
-  } catch (err) {
-    m.reply(`❌ Error: ${err.message}`);
-  }
-  break;
-}
 
 case 'listusers':
 case 'listuser':
@@ -2087,54 +1955,29 @@ case 'users': {
   if (!isDeveloper) return m.reply('❌ Hanya Developer (Owner) yang bisa!');
   
   try {
-    const firestore = admin.firestore();
-    const usersSnapshot = await firestore.collection('users').get();
+    let replyMsg = `👥 *DAFTAR ADMIN & OWNER*\n\n`;
     
-    if (usersSnapshot.empty) {
-      return m.reply('❌ Belum ada user di database.');
-    }
-    
-    let adminList = [];
-    let userList = [];
-    let totalUsers = 0;
-    
-    usersSnapshot.forEach(doc => {
-      const data = doc.data();
-      const phone = data.phone || doc.id.split('@')[0];
-      const role = (data.role || 'user').toLowerCase();
-      
-      totalUsers++;
-      
-      if (role === 'admin') {
-        adminList.push(phone);
-      } else {
-        userList.push(phone);
-      }
-    });
-    
-    let replyMsg = `👥 *DAFTAR USER FIRESTORE*\n\n`;
-    
-    if (adminList.length > 0) {
-      replyMsg += `*👨‍💼 ADMIN (${adminList.length})*\n`;
-      adminList.forEach((phone, idx) => {
+    // Show owners
+    if (global.owner && global.owner.length > 0) {
+      replyMsg += `*👑 OWNER (${global.owner.length})*\n`;
+      global.owner.forEach((phone, idx) => {
         replyMsg += `${idx + 1}. ${phone}\n`;
       });
       replyMsg += `\n`;
     }
     
-    if (userList.length > 0) {
-      replyMsg += `*👤 USER (${userList.length})*\n`;
-      // Limit to 20 users to avoid too long message
-      const displayUsers = userList.slice(0, 20);
-      displayUsers.forEach((phone, idx) => {
+    // Show admins from local storage
+    if (global.admin && global.admin.length > 0) {
+      replyMsg += `*👨‍💼 ADMIN (${global.admin.length})*\n`;
+      global.admin.forEach((phone, idx) => {
         replyMsg += `${idx + 1}. ${phone}\n`;
       });
-      if (userList.length > 20) {
-        replyMsg += `\n... dan ${userList.length - 20} user lainnya`;
-      }
+    } else {
+      replyMsg += `*👨‍💼 ADMIN (0)*\nBelum ada admin\n`;
     }
     
-    replyMsg += `\n\n*Total: ${totalUsers} users*`;
+    const totalAccess = (global.owner?.length || 0) + (global.admin?.length || 0);
+    replyMsg += `\n*Total: ${totalAccess} orang dengan akses*`;
     
     m.reply(replyMsg);
   } catch (err) {
@@ -2152,26 +1995,30 @@ case 'addadmin': {
   const targetPhone = text.trim();
   
   try {
-    const firestore = admin.firestore();
-    const targetJid = targetPhone.replace(/[^0-9]/g, '') + '@s.whatsapp.net';
-    
     // Normalize phone number: 08xxx -> 628xxx
     let normalizedPhone = targetPhone.replace(/[^0-9]/g, '');
     if (normalizedPhone.startsWith('0')) {
       normalizedPhone = '62' + normalizedPhone.slice(1);
     }
     
-    await firestore.collection('users').doc(targetJid).set({
-      phone: normalizedPhone,
-      role: 'admin',
-      updatedAt: new Date(),
-      updatedBy: m.sender
-    }, { merge: true });
+    // Check if already admin
+    if (global.admin.includes(normalizedPhone)) {
+      return m.reply(`⚠️ ${normalizedPhone} sudah menjadi admin!`);
+    }
+    
+    // Add to local admin list
+    global.admin.push(normalizedPhone);
+    
+    // Save to file
+    saveAdminList();
+    
+    const targetJid = normalizedPhone + '@s.whatsapp.net';
     
     m.reply(`✅ Berhasil ditambahkan sebagai admin!
 
 > Nomor : ${normalizedPhone}
 > Role : ADMIN
+> Total Admin : ${global.admin.length}
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈`);
 
     // Send notification to target user
@@ -2182,7 +2029,7 @@ Anda telah ditambahkan sebagai admin di AtlanTicket Bot!
 > Role : ADMIN
 > Disetujui oleh : ${m.pushName || 'Owner'}
 > Waktu : ${moment.tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss')} WIB
-┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+┈ׅ──ۄ─꯭─꯭──────꯭ׄ──ׅ┈
 
 📋 *COMMAND ADMIN YANG TERSEDIA:*
 > \`.show\` [refID] - Lihat bukti transfer
@@ -2196,7 +2043,9 @@ Anda telah ditambahkan sebagai admin di AtlanTicket Bot!
 
 Selamat bertugas! 🎯`;
 
-    await client.sendMessage(targetJid, { text: notifMsg });
+    await client.sendMessage(targetJid, { text: notifMsg }).catch(err => {
+      console.log(`⚠️ Failed to send notification to ${normalizedPhone}:`, err.message);
+    });
   } catch (err) {
     m.reply(`❌ Error: ${err.message}`);
   }
@@ -2211,13 +2060,27 @@ case 'rmadmin': {
   const targetPhone = text.trim();
   
   try {
-    const firestore = admin.firestore();
-    const targetJid = targetPhone.replace(/[^0-9]/g, '') + '@s.whatsapp.net';
+    // Normalize phone number: 08xxx -> 628xxx
+    let normalizedPhone = targetPhone.replace(/[^0-9]/g, '');
+    if (normalizedPhone.startsWith('0')) {
+      normalizedPhone = '62' + normalizedPhone.slice(1);
+    }
     
-    // Hapus document dari Firestore
-    await firestore.collection('users').doc(targetJid).delete();
+    // Check if is admin
+    const adminIndex = global.admin.indexOf(normalizedPhone);
+    if (adminIndex === -1) {
+      return m.reply(`⚠️ ${normalizedPhone} bukan admin!`);
+    }
     
-    m.reply(`✅ Berhasil dihapus dari admin!\n\n> Nomor : ${targetPhone}\n> Status : DIHAPUS DARI DATABASE`);
+    // Remove from local admin list
+    global.admin.splice(adminIndex, 1);
+    
+    // Save to file
+    saveAdminList();
+    
+    const targetJid = normalizedPhone + '@s.whatsapp.net';
+    
+    m.reply(`✅ Berhasil dihapus dari admin!\n\n> Nomor : ${normalizedPhone}\n> Status : DIHAPUS DARI DATABASE\n> Total Admin : ${global.admin.length}`);
 
     // Send notification to target user
     const notifMsg = `⚠️ *NOTIFIKASI PERUBAHAN AKSES*
@@ -2227,11 +2090,13 @@ Akses admin Anda telah dicabut dan dihapus dari database.
 > Status : DIHAPUS
 > Dicabut oleh : ${m.pushName || 'Owner'}
 > Waktu : ${moment.tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss')} WIB
-┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+┈ׅ──ׄ─꯭─꯭──────꯭��ׄ──ׅ┈
 
 Akses admin telah dihapus sepenuhnya. Untuk akses kembali, hubungi owner.`;
 
-    await client.sendMessage(targetJid, { text: notifMsg });
+    await client.sendMessage(targetJid, { text: notifMsg }).catch(err => {
+      console.log(`⚠️ Failed to send notification to ${normalizedPhone}:`, err.message);
+    });
   } catch (err) {
     m.reply(`❌ Error: ${err.message}`);
   }

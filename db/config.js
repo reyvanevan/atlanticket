@@ -4,6 +4,18 @@ const chalk = require('chalk');
 
 // BOT & OWNER INFO
 global.owner = (process.env.OWNER_NUMBERS || '6281224258870').split(',').map(n => n.trim());
+
+// ADMIN LIST (from local db/admin.json)
+try {
+  const adminFile = require.resolve('./admin.json');
+  const adminData = JSON.parse(fs.readFileSync(adminFile, 'utf8'));
+  global.admin = Array.isArray(adminData.admins) ? adminData.admins : [];
+  console.log(chalk.greenBright(`✅ Loaded ${global.admin.length} admin(s) from db/admin.json`));
+} catch (err) {
+  console.log(chalk.yellowBright(`⚠️ No admin.json found or error loading, starting with empty admin list`));
+  global.admin = [];
+}
+
 global.nomerOwner = process.env.OWNER_PRIMARY || '6281224258870G';
 global.nomerBot = process.env.BOT_NUMBER || '6285166328091';
 global.botName = process.env.BOT_NAME || 'Atlana';
