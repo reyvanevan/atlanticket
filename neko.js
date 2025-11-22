@@ -805,26 +805,26 @@ case 'help': {
 > Akses penuh ke semua fitur
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-1. *🎤 MANAJEMEN KONSER (Local Storage)*
+1. *🎤 MANAJEMEN KONSER*
 > \`.setup_konser\` [nama]|[tgl]|[jam]|[lokasi]|[harga]|[stok]|[deskripsi]
-> \`.confirm_setup\` - Simpan konser ke db/concerts.json
+> \`.confirm_setup\` - Simpan konser
 > \`.menu\` - Lihat konser aktif
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-2. 👨‍💼 *MANAJEMEN ADMIN (Local Storage)*
-> \`.addadmin\` [nomor] - Tambah admin → db/admin.json
-> \`.rmadmin\` [nomor] - Hapus admin dari list
+2. 👨‍💼 *MANAJEMEN ADMIN*
+> \`.addadmin\` [nomor] - Tambah admin
+> \`.rmadmin\` [nomor] - Hapus admin
 > \`.listusers\` - Lihat semua owner & admin
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-3. 🎫 *MANAJEMEN TIKET (Local Storage)*
+3. 🎫 *MANAJEMEN TIKET*
 > \`.acc\` [refID] - Approve pembayaran & generate tiket
 > \`.reject\` [refID] [alasan] - Tolak pembayaran
 > \`.scan\` [ticketID] [code] - Scan tiket masuk
 > \`.stok\` - Lihat stok tiket & analytics
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-4. 💰 *MANAJEMEN PEMBAYARAN (Local Storage)*
+4. 💰 *MANAJEMEN PEMBAYARAN*
 > \`.show\` [refID] - Lihat detail pembayaran
 > \`.riwayat\` - Lihat semua transaksi
 > \`.riwayat pending\` - Lihat pending
@@ -836,29 +836,22 @@ case 'help': {
 5. ⚙️ *SISTEM*
 > \`.ping\` - Cek status bot
 > \`.setbot\` [key] [value] - Setting grup
-┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
-
-📌 *LOCAL STORAGE FILES:*
-> db/concerts.json - Data konser
-> db/tickets.json - Data tiket
-> db/bukti_transfer.json - Data pembayaran
-> db/admin.json - Daftar admin
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈`;
 
     } else if (isAdmin) {
       // ADMIN COMMANDS
       helpText = `👨‍💼 *ADMIN COMMANDS*
-> Kelola tiket & verifikasi pembayaran (dari local storage)
+> Kelola tiket & verifikasi pembayaran
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-1. ✅ *VERIFIKASI PEMBAYARAN (Local Storage)*
+1. ✅ *VERIFIKASI PEMBAYARAN*
 > \`.show\` [refID] - Lihat detail pembayaran
 > \`.acc\` [refID] - Approve & generate tiket
 > \`.reject\` [refID] [alasan] - Tolak pembayaran
 > \`.scan\` [ticketID] [code] - Scan tiket saat masuk
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-2. 📊 *LAPORAN & ANALYTICS (Local Storage)*
+2. 📊 *LAPORAN & ANALYTICS*
 > \`.stok\` - Lihat stok tiket & penjualan
 > \`.riwayat\` - Lihat semua transaksi
 > \`.riwayat pending\` - Lihat pending
@@ -867,7 +860,7 @@ case 'help': {
 > \`.riwayat\` [nomor_hp] - Lihat user tertentu
 ┈ׅ──��─꯭─꯭──────꯭ׄ──ׅ┈
 
-3. 🔍 *INFO (Local Storage)*
+3. 🔍 *INFO*
 > \`.menu\` - Lihat konser aktif
 > \`.ping\` - Cek status bot
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
@@ -876,28 +869,23 @@ case 'help': {
 > ❌ Tidak bisa order tiket
 > ❌ Tidak bisa checkout
 > ❌ Tidak bisa upload bukti transfer
-┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
-
-📌 *DATA MANAGEMENT:*
-> Semua data disimpan di local storage (JSON)
-> Tidak ada lagi Firestore untuk tickets, concerts, bukti_transfer
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈`;
 
     } else {
       // USER/REGULAR COMMANDS
       helpText = `👤 *USER COMMANDS*
-> Pesan dan beli tiket konser (via local storage)
+> Pesan dan beli tiket konser
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
-1. 🎫 *PEMBELIAN TIKET (Local Storage)*
+1. 🎫 *PEMBELIAN TIKET*
 > \`.menu\` - Lihat konser aktif
 > \`.order\` - Lihat detail & memesan
 > \`.payment\` - Lihat info pembayaran
 > \`.bukti_tf\` [jumlah] [catatan] - Upload bukti transfer
 > \`.checkout\` - (alias: .pay, .bayar, .pembayaran)
-┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+┈ׅ──��─꯭─꯭──────꯭ׄ──ׅ┈
 
-2. 📜 *LIHAT RIWAYAT (Local Storage)*
+2. 📜 *LIHAT RIWAYAT*
 > \`.riwayat\` - Lihat riwayat pembayaran Anda
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
@@ -910,8 +898,6 @@ case 'help': {
 > ✅ Command hanya bekerja di private chat
 > ✅ Screenshot bukti transfer harus jelas & lengkap
 > ✅ Verifikasi maksimal 5 menit
-> ✅ Stok real-time (tidak perlu refresh)
-> ✅ Data aman di local storage (JSON)
 ┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈`;
     }
     
