@@ -86,6 +86,9 @@ const saveAdminList = () => {
 
 module.exports = client = async (client, m, chatUpdate, store, db_respon_list) => {
   try {
+      // Skip messages from bot itself (prevent infinite loop)
+      if (m.key?.fromMe) return;
+      
       // Tunggu Baileys load dulu
       await initBaileys;
       
