@@ -2315,26 +2315,97 @@ Harga : Rp ${data.jumlah.toLocaleString('id-ID')}
         return m.reply(riwayatText);
       }
       
-      return m.reply(`❌ Format tidak valid!\n.riwayat [pending|approved|rejected|nomor_hp]`);
+      return m.reply(`Format tidak valid!\n.riwayat [pending|approved|rejected|nomor_hp]`);
       
     } else {
       // USER MODE - Lihat riwayat bukti transfer dan tiket mereka
       const userJid = m.sender;
       
-      // Get tickets for user from local storage  
-      const userTickets = ticketManager.getByKonser ? [] : [];
+      // Extract phone from userJid
+      let userPhone = null;
+      if (m.key?.senderPn) {
+        userPhone = m.key.senderPn.split('@')[0];
+      } else {
+        userPhone = userJid.split('@')[0];
+      }
       
-      // Get bukti_transfer for user from local storage
-      const userBukti = buktiTransferManager.getByUserPhone ? [] : [];
+      // Get all data and filter for this user
+      const allTickets = ticketManager.getAll() || [];
+      const allBukti = buktiTransferManager.getAll() || [];
+      
+      // Filter by user
+      const userTickets = allTickets.filter(t => t.buyerPhone === userPhone || t.userPhone === userPhone);
+      const userBukti = allBukti.filter(b => b.userPhone === userPhone);
       
       // Check if user has any history
-      if ((!userTickets || userTickets.length === 0) && (!userBukti || userBukti.length === 0)) {
+      if (userTickets.length === 0 && userBukti.length === 0) {
         return m.reply('Anda belum memiliki riwayat transaksi apapun');
       }
       
-      let riwayatText = `RIWAYAT TRANSAKSI SAYA
+      let riwayatText = `*RIWAYAT TRANSAKSI SAYA*
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
 
 `;
+      
+      // Show tickets if any
+      if (userTickets.length > 0) {
+        const sorted = userTickets.slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        
+        riwayatText += `*TIKET SAYA* (${sorted.length})
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+`;
+        
+        let totalTicketSpent = 0;
+        sorted.forEach((data, idx) => {
+          totalTicketSpent += data.harga;
+          const statusMark = data.status === 'aktif' ? 'Aktif' : 'Expired';
+          riwayatText += `${idx + 1}. *${data.ticketID}*
+> Konser : ${data.konser}
+> Harga : Rp ${data.harga.toLocaleString('id-ID')}
+> Status : ${statusMark}
+> Dibeli : ${new Date(data.approvedAt).toLocaleString('id-ID')}
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+`;
+        });
+        riwayatText += `*Total Tiket : Rp ${totalTicketSpent.toLocaleString('id-ID')}*\n\n`;
+      }
+      
+      // Show bukti_transfer if any
+      if (userBukti.length > 0) {
+        // Sort by status (pending first)
+        const sorted = userBukti.slice().sort((a, b) => {
+          const statusPriority = { 'pending': 0, 'approved': 1, 'rejected': 2 };
+          if (statusPriority[a.status] !== statusPriority[b.status]) {
+            return statusPriority[a.status] - statusPriority[b.status];
+          }
+          return new Date(b.createdAt) - new Date(a.createdAt);
+        });
+        
+        riwayatText += `*BUKTI TRANSFER* (${sorted.length})
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+`;
+        
+        let totalBuktiSpent = 0;
+        sorted.forEach((data, idx) => {
+          totalBuktiSpent += data.jumlah;
+          const statusMark = data.status === 'pending' ? 'Menunggu' : data.status === 'approved' ? 'Disetujui' : 'Ditolak';
+          riwayatText += `${idx + 1}. *${data.refID}*
+> Jumlah : Rp ${data.jumlah.toLocaleString('id-ID')}
+> Status : ${statusMark}
+> Waktu : ${new Date(data.createdAt).toLocaleString('id-ID')}`;
+          if (data.catatan) {
+            riwayatText += `\n> Catatan : ${data.catatan}`;
+          }
+          riwayatText += `
+┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈
+
+`;
+        });
+        riwayatText += `*Total Transfer : Rp ${totalBuktiSpent.toLocaleString('id-ID')}*`;
+      }
       
       m.reply(riwayatText);
     }
