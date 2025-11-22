@@ -2578,6 +2578,114 @@ Stok & riwayat sudah kembali ke awal!`;
   break;
 }
 
+case 'export_csv': {
+  if (!isOwner) return m.reply('Hanya owner yang bisa!');
+  
+  try {
+    m.reply('⏳ Generating CSV...');
+    
+    // Get all data
+    const allTickets = ticketManager.getAll() || [];
+    const allBukti = buktiTransferManager.getAll() || [];
+    
+    // Generate CSV for tickets
+    let ticketsCSV = 'No,Ticket ID,Ref ID,Buyer Name,Buyer Phone,Concert,Price (Rp),Status,Bought At,Used At,Used By\n';
+    let ticketNo = 1;
+    allTickets.forEach(t => {
+      const buyerName = t.buyerName || '-';
+      const buyerPhone = t.buyerPhone || '-';
+      const harga = t.harga || 0;
+      const approvedAt = t.approvedAt ? new Date(t.approvedAt).toLocaleString('id-ID') : '-';
+      const scannedAt = t.scannedAt ? new Date(t.scannedAt).toLocaleString('id-ID') : '-';
+      const scannedBy = t.scannedBy || '-';
+      
+      ticketsCSV += `${ticketNo},"${t.ticketID}","${t.refID}","${buyerName}","${buyerPhone}","${t.konser}",${harga},"${t.status}","${approvedAt}","${scannedAt}","${scannedBy}"\n`;
+      ticketNo++;
+    });
+    
+    // Generate CSV for bukti transfer
+    let buktiCSV = 'No,Ref ID,User Name,User Phone,Amount (Rp),Status,Created At,Approved/Rejected At,Admin Phone,Reason\n';
+    let buktiNo = 1;
+    allBukti.forEach(b => {
+      const userName = b.userName || '-';
+      const userPhone = b.userPhone || '-';
+      const jumlah = b.jumlah || 0;
+      const createdAt = new Date(b.createdAt).toLocaleString('id-ID');
+      
+      let actionAt = '-';
+      let adminPhone = '-';
+      let reason = '-';
+      
+      if (b.status === 'approved' && b.approvedAt) {
+        actionAt = new Date(b.approvedAt).toLocaleString('id-ID');
+        adminPhone = b.approvedBy ? b.approvedBy.split('@')[0] : '-';
+      } else if (b.status === 'rejected' && b.rejectedAt) {
+        actionAt = new Date(b.rejectedAt).toLocaleString('id-ID');
+        adminPhone = b.rejectedBy ? b.rejectedBy.split('@')[0] : '-';
+        reason = b.alasan || '-';
+      }
+      
+      buktiCSV += `${buktiNo},"${b.refID}","${userName}","${userPhone}",${jumlah},"${b.status}","${createdAt}","${actionAt}","${adminPhone}","${reason}"\n`;
+      buktiNo++;
+    });
+    
+    // Generate summary stats
+    const ticketStats = ticketManager.getStats();
+    const buktiStats = buktiTransferManager.getStats();
+    
+    const summaryText = `
+=== EXPORT SUMMARY ===
+Export Date: ${moment().tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss')} WIB
+
+TIKET STATISTICS:
+- Total: ${ticketStats.total}
+- Aktif: ${ticketStats.aktif}
+- Used: ${ticketStats.used}
+- Invalid: ${ticketStats.invalid}
+
+BUKTI TRANSFER STATISTICS:
+- Total: ${buktiStats.total}
+- Pending: ${buktiStats.pending}
+- Approved: ${buktiStats.approved}
+- Rejected: ${buktiStats.rejected}
+
+FILES GENERATED:
+- tickets.csv
+- bukti_transfer.csv
+`;
+
+    // Save CSV files
+    const ticketsPath = `./tmp/tickets_${moment().format('YYYYMMDD_HHmmss')}.csv`;
+    const buktiPath = `./tmp/bukti_transfer_${moment().format('YYYYMMDD_HHmmss')}.csv`;
+    
+    // Create tmp directory if not exists
+    if (!fs.existsSync('./tmp')) {
+      fs.mkdirSync('./tmp', { recursive: true });
+    }
+    
+    fs.writeFileSync(ticketsPath, ticketsCSV, 'utf8');
+    fs.writeFileSync(buktiPath, buktiCSV, 'utf8');
+    
+    console.log(`✅ CSV files generated at:\n- ${ticketsPath}\n- ${buktiPath}`);
+    
+    // Send both files
+    await client.sendFile(from, ticketsPath, 'tickets.csv', '📋 *TIKET DATA*\n\nFile CSV berisi semua data tiket dengan detail lengkap');
+    
+    await sleep(1000);
+    
+    await client.sendFile(from, buktiPath, 'bukti_transfer.csv', '💳 *BUKTI TRANSFER DATA*\n\nFile CSV berisi semua data bukti transfer dengan detail lengkap');
+    
+    await sleep(1000);
+    
+    m.reply(`✅ Export berhasil!\n${summaryText}`);
+    
+  } catch (err) {
+    console.error('Export error:', err);
+    m.reply(`Error: ${err.message}`);
+  }
+  break;
+}
+
 case 'owner': {
     var owner_Nya = `${global.nomerOwner}@s.whatsapp.net`;
 
