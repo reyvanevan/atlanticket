@@ -183,20 +183,32 @@ const command = cleanBody.replace(prefix, '').trim().split(/ +/).shift().toLower
     const isOwner = [botNumber, ...global.owner].map(v => v.replace(/[^0-9]/g, '') + '@s.whatsapp.net').includes(m.sender)
     
     // ========== LOCAL ADMIN CHECK (FAST & RELIABLE) ==========
-    // Extract phone number
+    // Extract phone number with validation
     let phoneNumber = null;
+    
+    // Try senderPn first (most reliable)
     if (m.key?.senderPn) {
-      phoneNumber = m.key.senderPn.split('@')[0];
+      const candidate = m.key.senderPn.split('@')[0];
+      // Validate: must be 12-13 digits and start with 62
+      if (/^\d{12,13}$/.test(candidate) && candidate.startsWith('62')) {
+        phoneNumber = candidate;
+      }
     }
+    
+    // Fallback to m.sender if senderPn failed
     if (!phoneNumber && m.sender) {
-      phoneNumber = m.sender.split('@')[0];
+      const candidate = m.sender.split('@')[0];
+      // Validate: must be 12-13 digits and start with 62
+      if (/^\d{12,13}$/.test(candidate) && candidate.startsWith('62')) {
+        phoneNumber = candidate;
+      }
     }
     
     // Check if in local admin or owner list
     const isAdmin = (phoneNumber && (global.admin?.includes(phoneNumber) || global.owner?.includes(phoneNumber))) || isOwner;
     const isDeveloper = isOwner; // Only Owner (Developer)
     
-    console.log(color(`🔐 [AUTH] Sender: ${phoneNumber} | isAdmin: ${isAdmin} | isOwner: ${isOwner}`, 'cyan'));
+    console.log(color(`🔐 [AUTH] Sender: ${phoneNumber || 'INVALID'} | isAdmin: ${isAdmin} | isOwner: ${isOwner}`, 'cyan'));
     
     const sender = m.isGroup ? (m.key.participant ? m.key.participant : m.participant) : m.key.remoteJid
     
