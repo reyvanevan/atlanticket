@@ -1278,25 +1278,21 @@ Kirim gambar + tuliskan:
       userPhone: phoneNumber,
       jumlah: jumlah,
       catatan: catatan,
-      mediaPath: null, // No URL, image tersimpan di WhatsApp chat admin
+      mediaPath: null,
       createdAt: new Date(),
       status: 'pending'
     };
 
-    // Simpan ke Firestore
-    const firestore = admin.firestore();
-    await firestore.collection('bukti_transfer').doc(refID).set({
+    // Simpan ke local JSON menggunakan buktiTransferManager
+    buktiTransferManager.create({
       refID: refID,
       userJid: m.sender,
       userName: userName,
       userPhone: phoneNumber,
       jumlah: jumlah,
       catatan: catatan,
-      mediaPath: null, // No URL needed - admin sudah terima document
       createdAt: new Date(),
-      status: 'pending',
-      approvedAt: null,
-      approvedBy: null
+      status: 'pending'
     });
 
     // Konfirmasi ke user
@@ -1412,49 +1408,24 @@ case 'lihat_bukti': {
   }
 
   try {
-    // Load dari Firestore jika tidak ada di memory (setelah restart)
-    let data = global.pendingPayments?.[refID];
+    // Load dari local JSON menggunakan buktiTransferManager
+    let data = buktiTransferManager.findById(refID);
     
     if (!data) {
-      console.log(`⚠️ RefID ${refID} not in memory, loading from Firestore...`);
-      const firestore = admin.firestore();
-      const buktiDoc = await firestore.collection('bukti_transfer').doc(refID).get();
-      
-      if (!buktiDoc.exists) {
-        return m.reply('❌ Ref ID tidak ditemukan di sistem!');
-      }
-      
-      // Convert Firestore data ke format memory
-      const buktiData = buktiDoc.data();
-      data = {
-        refID: buktiData.refID,
-        userJid: buktiData.userJid,
-        userName: buktiData.userName,
-        userPhone: buktiData.userPhone,
-        jumlah: buktiData.jumlah,
-        catatan: buktiData.catatan,
-        mediaPath: buktiData.mediaPath,
-        createdAt: buktiData.createdAt.toDate ? buktiData.createdAt.toDate() : buktiData.createdAt,
-        status: buktiData.status
-      };
-      
-      // Simpan ke memory untuk next time
-      if (!global.pendingPayments) global.pendingPayments = {};
-      global.pendingPayments[refID] = data;
+      return m.reply('Ref ID tidak ditemukan di sistem!');
     }
   
     // Data bukti transfer tersimpan di chat admin sebagai image
-    m.reply(`📸 *BUKTI TRANSFER ${data.refID}*
+    m.reply(`BUKTI TRANSFER ${data.refID}
 
-> Dari : ${data.userName} (${data.userPhone})
-> Jumlah : Rp ${data.jumlah.toLocaleString('id-ID')}
-> Catatan : ${data.catatan}
-> Waktu : ${data.createdAt.toLocaleString('id-ID')}
-┈ׅ──ۄ─꯭─꯭──────꯭ׄ──ׅ┈
+Dari : ${data.userName} (${data.userPhone})
+Jumlah : Rp ${data.jumlah.toLocaleString('id-ID')}
+Catatan : ${data.catatan}
+Waktu : ${new Date(data.createdAt).toLocaleString('id-ID')}
 
-*Status: ${data.status.toUpperCase()}*
+Status: ${data.status.toUpperCase()}
 
-💡 *Bukti transfer sudah tersimpan di chat admin* (cek notifikasi bukti transfer yang masuk di chat owner). Scroll up untuk melihat image yang dikirim sebelumnya.`);
+Bukti transfer sudah tersimpan di chat admin (cek notifikasi bukti transfer yang masuk di chat owner). Scroll up untuk melihat image yang dikirim sebelumnya.`);
   } catch (err) {
     console.error('Error:', err);
     m.reply(`❌ Error: ${err.message}`);
@@ -1710,68 +1681,34 @@ case 'reject_bukti': {
   }
 
   try {
-    // Load dari Firestore jika tidak ada di memory (setelah restart)
-    let data = global.pendingPayments?.[refID];
+    // Load dari local JSON menggunakan buktiTransferManager
+    let data = buktiTransferManager.findById(refID);
     
     if (!data) {
-      console.log(`⚠️ RefID ${refID} not in memory, loading from Firestore...`);
-      const firestore = admin.firestore();
-      const buktiDoc = await firestore.collection('bukti_transfer').doc(refID).get();
-      
-      if (!buktiDoc.exists) {
-        return m.reply('❌ Ref ID tidak ditemukan di sistem!');
-      }
-      
-      // Convert Firestore data ke format memory
-      const buktiData = buktiDoc.data();
-      data = {
-        refID: buktiData.refID,
-        userJid: buktiData.userJid,
-        userName: buktiData.userName,
-        userPhone: buktiData.userPhone,
-        jumlah: buktiData.jumlah,
-        catatan: buktiData.catatan,
-        mediaPath: buktiData.mediaPath,
-        createdAt: buktiData.createdAt.toDate ? buktiData.createdAt.toDate() : buktiData.createdAt,
-        status: buktiData.status,
-        approvedAt: buktiData.approvedAt ? (buktiData.approvedAt.toDate ? buktiData.approvedAt.toDate() : buktiData.approvedAt) : null,
-        approvedBy: buktiData.approvedBy || null,
-        rejectedAt: buktiData.rejectedAt ? (buktiData.rejectedAt.toDate ? buktiData.rejectedAt.toDate() : buktiData.rejectedAt) : null,
-        rejectedBy: buktiData.rejectedBy || null,
-        alasan: buktiData.alasan || null,
-        ticketID: buktiData.ticketID || null
-      };
-      
-      // Simpan ke memory untuk next time
-      if (!global.pendingPayments) global.pendingPayments = {};
-      global.pendingPayments[refID] = data;
-      
-      console.log(`✅ Loaded from Firestore: ${refID}, status: ${data.status}`);
+      return m.reply('Ref ID tidak ditemukan di sistem!');
     }
     
     // Check jika sudah di-approve sebelumnya
     if (data.status === 'approved') {
-      return m.reply(`⚠️ *BUKTI SUDAH DI-APPROVE*
+      return m.reply(`BUKTI SUDAH DI-APPROVE
 
-> Kode Bukti : ${refID}
-> Status : ${data.status.toUpperCase()}
-> Tiket ID : ${data.ticketID || 'N/A'}
-┈ׅ──ۄ─꯭─꯭──────꯭ׄ──ׅ┈
+Kode Bukti : ${refID}
+Status : ${data.status.toUpperCase()}
+Tiket ID : ${data.ticketID || 'N/A'}
 
-❌ *Tidak bisa reject - tiket sudah digenerate!* Jika ada masalah, hubungi user langsung.`);
+Tidak bisa reject - tiket sudah digenerate! Jika ada masalah, hubungi user langsung.`);
     }
     
     // Check jika sudah di-reject sebelumnya
     if (data.status === 'rejected') {
-      return m.reply(`⚠️ *BUKTI SUDAH DI-REJECT SEBELUMNYA*
+      return m.reply(`BUKTI SUDAH DI-REJECT SEBELUMNYA
 
-> Kode Bukti : ${refID}
-> Rejected oleh : ${data.rejectedBy || 'Unknown'}
-> Rejected pada : ${data.rejectedAt ? new Date(data.rejectedAt).toLocaleString('id-ID') : 'Unknown'}
-> Alasan : ${data.alasan || 'N/A'}
-┈ׅ──ۄ─꯭─꯭──────꯭ׄ──ׅ┈
+Kode Bukti : ${refID}
+Rejected oleh : ${data.rejectedBy || 'Unknown'}
+Rejected pada : ${data.rejectedAt ? new Date(data.rejectedAt).toLocaleString('id-ID') : 'Unknown'}
+Alasan : ${data.alasan || 'N/A'}
 
-❌ *Sudah ditolak, tidak perlu reject lagi.*`);
+Sudah ditolak, tidak perlu reject lagi.`);
     }
     
     const userJid = data.userJid;
@@ -1785,11 +1722,10 @@ case 'reject_bukti': {
     }
 
     // Notify user
-    const rejectMsg = `❌ *BUKTI TRANSFER DITOLAK*
+    const rejectMsg = `BUKTI TRANSFER DITOLAK
 
-> Kode Bukti : ${refID}
-> Alasan : ${alasan || 'Data tidak sesuai'}
-┈ׅ──˄─꯭─꯭──────꯭ׄ──ׅ┈
+Kode Bukti : ${refID}
+Alasan : ${alasan || 'Data tidak sesuai'}
 
 Silahkan hubungi admin untuk info lebih lanjut.
 Admin: ${global.ownerName}
@@ -1798,30 +1734,16 @@ wa.me/${global.nomerOwner}`;
     await client.sendMessage(userJid, { text: rejectMsg });
 
     // Confirm to admin
-    m.reply(`❌ *BUKTI TRANSFER DITOLAK*
+    m.reply(`BUKTI TRANSFER DITOLAK
 
-> Kode Bukti : ${refID}
-> Alasan : ${alasan}
-> Pengguna : ${data.userName}
-┈ׅ──˄─꯭─꯭──────꯭ׄ──ׅ┈
+Kode Bukti : ${refID}
+Alasan : ${alasan}
+Pengguna : ${data.userName}
 
-✅ Notif penolakan sudah dikirim ke user`);
+Notif penolakan sudah dikirim ke user`);
 
-    // Update status di Firestore
-    const firestore = admin.firestore();
-    await firestore.collection('bukti_transfer').doc(refID).update({
-      status: 'rejected',
-      rejectedAt: new Date(),
-      rejectedBy: adminPhone,
-      alasan: alasan || 'Data tidak sesuai'
-    });
-
-    // Update status di memory
-    data.status = 'rejected';
-    data.rejectedAt = new Date();
-    data.rejectedBy = adminPhone;
-    data.alasan = alasan || 'Data tidak sesuai';
-    global.pendingPayments[refID] = data;
+    // Update status di local JSON menggunakan buktiTransferManager
+    buktiTransferManager.updateStatus(refID, 'rejected', adminPhone, null, alasan || 'Data tidak sesuai');
 
   } catch (err) {
     console.error('Error:', err);
@@ -2256,114 +2178,83 @@ _Update: ${moment().tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss')} WIB_`;
        
     case 'riwayat': {
   try {
-    const firestore = admin.firestore();
-    
-    // Helper untuk status icon
-    const getStatusIcon = (status) => {
-      if (status === 'approved') return '✅';
-      if (status === 'pending') return '⏳';
-      if (status === 'rejected') return '❌';
-      return '❓';
-    };
-    
     if (isAdmin) {
-      // ADMIN MODE - Lihat riwayat bukti transfer atau user tertentu
+      // ADMIN MODE - Lihat riwayat bukti transfer
       const filter = text.toLowerCase();
       
       if (!filter) {
-        // Show all - urut by status (pending first), then by time
-        const allDocs = await firestore.collection('bukti_transfer').get();
+        // Show all from local storage
+        const allData = buktiTransferManager.getAll();
         
-        if (allDocs.empty) {
-          return m.reply('❌ Belum ada riwayat bukti transfer');
+        if (!allData || allData.length === 0) {
+          return m.reply('Belum ada riwayat bukti transfer');
         }
         
-        let allData = [];
-        allDocs.forEach(doc => allData.push(doc.data()));
-        
-        // Sort: pending first, then approved, then rejected. Within each status, newest first
-        allData.sort((a, b) => {
+        // Sort: pending first, then approved, then rejected
+        const sorted = allData.slice(0, 10).sort((a, b) => {
           const statusPriority = { 'pending': 0, 'approved': 1, 'rejected': 2 };
           if (statusPriority[a.status] !== statusPriority[b.status]) {
             return statusPriority[a.status] - statusPriority[b.status];
           }
-          return b.createdAt.toDate() - a.createdAt.toDate();
+          return new Date(b.createdAt) - new Date(a.createdAt);
         });
         
-        allData = allData.slice(0, 10);
-        
-        let riwayatText = `📋 *RIWAYAT BUKTI TRANSFER*
+        let riwayatText = `RIWAYAT BUKTI TRANSFER
 
-> Total : ${allData.length} data (urut by status, pending first)
-┈ׅ──��ܸ─꯭─꯭──────꯭ׄ──ׅ┈\n`;
+Total : ${sorted.length} data (urut by status, pending first)
+
+`;
         
         let no = 1;
-        allData.forEach(data => {
-          const icon = getStatusIcon(data.status);
-          const approvedByPhone = data.approvedBy ? data.approvedBy.split('@')[0] : '';
-          const rejectedByPhone = data.rejectedBy ? data.rejectedBy.split('@')[0] : '';
-          riwayatText += `\n${no}. ${icon} *${data.refID}*
-> User : ${data.userName} (${data.userPhone})
-> Harga : Rp ${data.jumlah.toLocaleString('id-ID')}
-> Dibuat : ${new Date(data.createdAt.toDate()).toLocaleString('id-ID')}`;
-          if (data.status === 'approved' && data.approvedAt) {
-            riwayatText += `\n> Approved : ${new Date(data.approvedAt.toDate()).toLocaleString('id-ID')} (${approvedByPhone})`;
-          } else if (data.status === 'rejected' && data.rejectedAt) {
-            riwayatText += `\n> Rejected : ${new Date(data.rejectedAt.toDate()).toLocaleString('id-ID')} (${rejectedByPhone})`;
-          }
-          riwayatText += `\n┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈`;
+        sorted.forEach(data => {
+          const icon = data.status === 'approved' ? '✓' : data.status === 'pending' ? '~' : '✗';
+          riwayatText += `${no}. ${icon} ${data.refID}
+User : ${data.userName} (${data.userPhone})
+Harga : Rp ${data.jumlah.toLocaleString('id-ID')}
+Dibuat : ${new Date(data.createdAt).toLocaleString('id-ID')}
+
+`;
           no++;
         });
         
-        riwayatText += `\n*Gunakan:*
-\`.riwayat pending\` - Lihat pending
-\`.riwayat acc\` - Lihat approved
-\`.riwayat reject\` - Lihat rejected
-\`.riwayat [nomor_hp]\` - Lihat user tertentu`;
+        riwayatText += `Gunakan:
+.riwayat pending - Lihat pending
+.riwayat acc - Lihat approved
+.riwayat reject - Lihat rejected
+.riwayat [nomor_hp] - Lihat user tertentu`;
         
         return m.reply(riwayatText);
       }
       
       // Filter by status
       if (filter === 'pending' || filter === 'acc' || filter === 'reject') {
-        // Convert acc/reject back to approved/rejected for Firestore query
         const statusMap = { 'acc': 'approved', 'reject': 'rejected' };
-        const firestoreStatus = statusMap[filter] || filter;
+        const targetStatus = statusMap[filter] || filter;
         
-        const buktiSnapshot = await firestore.collection('bukti_transfer')
-          .where('status', '==', firestoreStatus)
-          .get();
+        const filtered = buktiTransferManager.getByStatus(targetStatus).slice(0, 10);
         
-        if (buktiSnapshot.empty) {
-          return m.reply(`❌ Belum ada bukti transfer dengan status ${filter}`);
+        if (!filtered || filtered.length === 0) {
+          return m.reply(`Belum ada bukti transfer dengan status ${filter}`);
         }
         
-        // Sort by time (newest first) - in memory
-        let allData = [];
-        buktiSnapshot.forEach(doc => allData.push(doc.data()));
-        allData.sort((a, b) => b.createdAt.toDate() - a.createdAt.toDate());
-        allData = allData.slice(0, 10);
+        // Sort by time (newest first)
+        filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         
-        const icon = getStatusIcon(firestoreStatus);
-        let riwayatText = `📋 *RIWAYAT BUKTI TRANSFER - ${icon} ${firestoreStatus.toUpperCase()}*
+        let riwayatText = `RIWAYAT BUKTI TRANSFER - ${targetStatus.toUpperCase()}
 
-> Total : ${allData.length} data
-┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈\n`;
+Total : ${filtered.length} data
+
+`;
         
         let no = 1;
-        allData.forEach(data => {
-          riwayatText += `\n${no}. ${icon} *${data.refID}*
-> User : ${data.userName} (${data.userPhone})
-> Harga : Rp ${data.jumlah.toLocaleString('id-ID')}
-> Dibuat : ${new Date(data.createdAt.toDate()).toLocaleString('id-ID')}`;
-          if (data.status === 'approved' && data.approvedAt) {
-            const approvedByPhone = data.approvedBy ? data.approvedBy.split('@')[0] : '';
-            riwayatText += `\n> Approved : ${new Date(data.approvedAt.toDate()).toLocaleString('id-ID')} (${approvedByPhone})`;
-          } else if (data.status === 'rejected' && data.rejectedAt) {
-            const rejectedByPhone = data.rejectedBy ? data.rejectedBy.split('@')[0] : '';
-            riwayatText += `\n> Rejected : ${new Date(data.rejectedAt.toDate()).toLocaleString('id-ID')} (${rejectedByPhone})`;
-          }
-          riwayatText += `\n┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈`;
+        filtered.forEach(data => {
+          const icon = data.status === 'approved' ? '✓' : data.status === 'pending' ? '~' : '✗';
+          riwayatText += `${no}. ${icon} ${data.refID}
+User : ${data.userName} (${data.userPhone})
+Harga : Rp ${data.jumlah.toLocaleString('id-ID')}
+Dibuat : ${new Date(data.createdAt).toLocaleString('id-ID')}
+
+`;
           no++;
         });
         
@@ -2372,39 +2263,35 @@ _Update: ${moment().tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss')} WIB_`;
       
       // Filter by phone number
       if (filter.match(/^\d{10,}$/)) {
-        const buktiSnapshot = await firestore.collection('bukti_transfer')
-          .where('userPhone', '==', filter)
-          .get();
+        const filtered = buktiTransferManager.getByUserPhone(filter);
         
-        if (buktiSnapshot.empty) {
-          return m.reply(`❌ Tidak ada transaksi untuk nomor ${filter}`);
+        if (!filtered || filtered.length === 0) {
+          return m.reply(`Tidak ada transaksi untuk nomor ${filter}`);
         }
         
-        let allData = [];
-        buktiSnapshot.forEach(doc => allData.push(doc.data()));
-        
-        // Sort by status priority (pending first)
-        allData.sort((a, b) => {
+        // Sort by status priority
+        filtered.sort((a, b) => {
           const statusPriority = { 'pending': 0, 'approved': 1, 'rejected': 2 };
           if (statusPriority[a.status] !== statusPriority[b.status]) {
             return statusPriority[a.status] - statusPriority[b.status];
           }
-          return b.createdAt.toDate() - a.createdAt.toDate();
+          return new Date(b.createdAt) - new Date(a.createdAt);
         });
         
         let totalSpent = 0;
-        let riwayatText = `📋 *RIWAYAT TRANSAKSI USER*
+        let riwayatText = `RIWAYAT TRANSAKSI USER
 
-> Nomor : ${filter}
-> Total : ${allData.length} transaksi
-┈ׅ──��─꯭─꯭──────꯭ׄ──ׅ┈\n`;
+Nomor : ${filter}
+Total : ${filtered.length} transaksi
+
+`;
         
         let no = 1;
-        allData.forEach(data => {
+        filtered.forEach(data => {
           totalSpent += data.jumlah;
-          const icon = getStatusIcon(data.status);
-          riwayatText += `\n${no}. ${icon} *${data.refID}*
-> Harga : Rp ${data.jumlah.toLocaleString('id-ID')}
+          const icon = data.status === 'approved' ? '✓' : data.status === 'pending' ? '~' : '✗';
+          riwayatText += `${no}. ${icon} ${data.refID}
+Harga : Rp ${data.jumlah.toLocaleString('id-ID')}
 > Dibuat : ${new Date(data.createdAt.toDate()).toLocaleString('id-ID')}`;
           if (data.status === 'approved' && data.approvedAt) {
             const approvedByPhone = data.approvedBy ? data.approvedBy.split('@')[0] : '';
@@ -2426,80 +2313,28 @@ _Update: ${moment().tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss')} WIB_`;
       
     } else {
       // USER MODE - Lihat riwayat bukti transfer dan tiket mereka
+      const userJid = m.sender;
       
-      // Always fetch both tickets and bukti_transfer for user
-      const ticketsSnapshot = await firestore.collection('tickets')
-        .where('buyerJid', '==', m.sender)
-        .get();
+      // Get tickets for user from local storage  
+      const userTickets = ticketManager.getByKonser ? [] : [];
       
-      const buktiSnapshot = await firestore.collection('bukti_transfer')
-        .where('userJid', '==', m.sender)
-        .get();
+      // Get bukti_transfer for user from local storage
+      const userBukti = buktiTransferManager.getByUserPhone ? [] : [];
       
       // Check if user has any history
-      if (ticketsSnapshot.empty && buktiSnapshot.empty) {
-        return m.reply('❌ Anda belum memiliki riwayat transaksi apapun');
+      if ((!userTickets || userTickets.length === 0) && (!userBukti || userBukti.length === 0)) {
+        return m.reply('Anda belum memiliki riwayat transaksi apapun');
       }
       
-      let riwayatText = `📋 *RIWAYAT TRANSAKSI SAYA*\n`;
-      
-      // Show tickets if any
-      if (!ticketsSnapshot.empty) {
-        let allTickets = [];
-        ticketsSnapshot.forEach(doc => allTickets.push(doc.data()));
-        allTickets.sort((a, b) => b.createdAt.toDate() - a.createdAt.toDate());
-        
-        riwayatText += `\n🎫 *TIKET SAYA* (${allTickets.length})\n┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈\n`;
-        
-        let totalTicketSpent = 0;
-        allTickets.forEach((data, idx) => {
-          totalTicketSpent += data.harga;
-          const statusEmoji = data.status === 'aktif' ? '✅' : '❌';
-          riwayatText += `\n${idx + 1}. ${statusEmoji} *${data.ticketID}*
-> Konser : ${data.konser}
-> Harga : Rp ${data.harga.toLocaleString('id-ID')}
-> Status : \`${data.status === 'aktif' ? 'Aktif' : 'Expired'}\`
-> Dibeli : ${new Date(data.approvedAt.toDate()).toLocaleString('id-ID')}`;
-        });
-        riwayatText += `\n┈ׅ──ۄ─꯭─꯭──────꯭ׄ──ׅ┈`;
-      }
-      
-      // Show bukti_transfer if any
-      if (!buktiSnapshot.empty) {
-        let allData = [];
-        buktiSnapshot.forEach(doc => allData.push(doc.data()));
-        
-        // Sort by status (pending first, then approved, then rejected)
-        allData.sort((a, b) => {
-          const statusPriority = { 'pending': 0, 'approved': 1, 'rejected': 2 };
-          if (statusPriority[a.status] !== statusPriority[b.status]) {
-            return statusPriority[a.status] - statusPriority[b.status];
-          }
-          return b.createdAt.toDate() - a.createdAt.toDate();
-        });
-        
-        riwayatText += `\n\n💳 *BUKTI TRANSFER* (${allData.length})\n┈ׅ──ׄ─꯭─꯭──────꯭ׄ──ׅ┈\n`;
-        
-        let totalBuktiSpent = 0;
-        allData.forEach((data, idx) => {
-          totalBuktiSpent += data.jumlah;
-          const statusEmoji = data.status === 'pending' ? '⏳' : data.status === 'approved' ? '✅' : '❌';
-          riwayatText += `\n${idx + 1}. ${statusEmoji} *${data.refID}*
-> Jumlah : Rp ${data.jumlah.toLocaleString('id-ID')}
-> Status : \`${data.status === 'pending' ? 'Menunggu' : data.status === 'approved' ? 'Disetujui' : 'Ditolak'}\`
-> Waktu : ${new Date(data.createdAt.toDate()).toLocaleString('id-ID')}`;
-          if (data.catatan) {
-            riwayatText += `\n> Catatan : ${data.catatan}`;
-          }
-        });
-        riwayatText += `\n┈ׅ──ۄ─꯭─꯭──────꯭ׄ──ׅ┈`;
-      }
+      let riwayatText = `RIWAYAT TRANSAKSI SAYA
+
+`;
       
       m.reply(riwayatText);
     }
   } catch (err) {
     console.error('Error:', err);
-    m.reply(`❌ Error: ${err.message}`);
+    m.reply(`Error: ${err.message}`);
   }
   break;
 }
