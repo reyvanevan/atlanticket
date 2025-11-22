@@ -471,9 +471,9 @@ async function generateTicketWithQR(ticketData, qrCodePath, templatePath) {
       const qrImage = await loadImage(qrCodePath);
       
       // Position QR di panel merah (kanan)
-      // Panel merah mulai dari 70% lebar canvas
-      const panelStartX = canvas.width * 0.7; // Panel merah mulai dari 70% lebar
-      const panelWidth = canvas.width * 0.3; // Lebar panel 30%
+      // Panel merah mulai dari 72% lebar canvas
+      const panelStartX = canvas.width * 0.72; // Panel merah mulai dari 72% lebar
+      const panelWidth = canvas.width * 0.28; // Lebar panel 28%
       
       // QR size diperbesar (tanpa white padding)
       const qrSize = Math.min(panelWidth * 0.85, canvas.height * 0.55); // 85% dari panel width
@@ -484,20 +484,7 @@ async function generateTicketWithQR(ticketData, qrCodePath, templatePath) {
       ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize);
     }
     
-    // Add ticket info text - hanya TICKET ID di bawah QR
-    const panelCenterX = canvas.width * 0.85; // Center dari panel merah (85% dari total width)
-    
-    ctx.fillStyle = "#000000"; // Black color
-    ctx.font = "bold 18px Arial";
-    ctx.textAlign = "center";
-    ctx.shadowColor = "transparent";
-    ctx.shadowBlur = 0;
-    
-    // Ticket ID di bawah QR
-    const qrBottomY = canvas.height * 0.20 + (canvas.height * 0.55 * 0.85); // Posisi bawah QR
-    ctx.fillText(`TICKET ID`, panelCenterX, qrBottomY + 30);
-    ctx.font = "16px Arial";
-    ctx.fillText(ticketData.ticketID, panelCenterX, qrBottomY + 55);
+    // No text - QR code only
     
     // Save to file
     const outputDir = path.join(__dirname, "db/tickets/");
