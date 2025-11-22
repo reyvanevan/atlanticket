@@ -2600,7 +2600,7 @@ Pakai '.reset_stok all' untuk force delete SEMUA tiket`;
 case 'rekap':
 case 'recap':
 case 'export_csv': {
-  if (!isOwner) return m.reply('Hanya owner yang bisa!');
+  if (!isAdmin) return m.reply('❌ Hanya admin/owner yang bisa!');
   
   try {
     m.reply('⏳ Generating CSV...');
