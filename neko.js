@@ -2616,6 +2616,13 @@ let file = require.resolve(__filename)
 fs.watchFile(file, () => {
   fs.unwatchFile(file)
   console.log(chalk.redBright(`Update ${__filename}`))
+  
+  // Clear all dependencies from cache before reloading
+  delete require.cache[require.resolve('./lib/ticketManager')]
+  delete require.cache[require.resolve('./lib/buktiTransferManager')]
+  delete require.cache[require.resolve('./lib/concertManager')]
+  delete require.cache[require.resolve('./lib/storage')]
   delete require.cache[file]
+  
   require(file)
 })
