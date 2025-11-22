@@ -2372,6 +2372,41 @@ Lihat console untuk Object.keys!`;
   break;
 }
 
+case 'reset_stok': {
+  if (!isOwner) return m.reply('Hanya owner yang bisa!');
+  
+  try {
+    // Get active concert
+    const activeConcert = concertManager.getActive();
+    
+    if (!activeConcert) {
+      return m.reply('Belum ada konser aktif untuk di-reset!');
+    }
+    
+    // Reset stok to stokAwal
+    const success = concertManager.resetStock(activeConcert.konserID);
+    
+    if (!success) {
+      return m.reply('Gagal reset stok!');
+    }
+    
+    const newData = concertManager.findById(activeConcert.konserID);
+    
+    m.reply(`RESET STOK SUCCESS
+
+Konser : ${newData.nama}
+Stok Awal : ${newData.stokAwal}
+Stok Sekarang : ${newData.stok}
+Status : ${newData.status}
+
+Stok sudah di-reset ke nilai awal!`);
+    
+  } catch (err) {
+    m.reply(`Error: ${err.message}`);
+  }
+  break;
+}
+
 case 'owner': {
     var owner_Nya = `${global.nomerOwner}@s.whatsapp.net`;
 
